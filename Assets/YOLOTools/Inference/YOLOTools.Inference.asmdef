@@ -1,0 +1,17 @@
+{
+    "name": "YOLOTools.Inference",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Sentis",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

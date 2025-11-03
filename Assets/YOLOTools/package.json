@@ -1,0 +1,27 @@
+{
+  "name": "com.matthewlyon23.yolotools",
+  "version": "1.0.0",
+  "displayName": "YOLO Tools",
+  "description": "A YOLO toolkit for performing real-time YOLO object-detection in Unity.",
+  "documentationUrl": "https://github.com/matthewlyon23/YOLOQuestUnity",
+  "licensesUrl": "https://github.com/matthewlyon23/YOLOQuestUnity/blob/main/LICENSE",
+  "dependencies": {
+    "com.meta.xr.sdk.all": "77.0.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.xr.oculus": "4.2.0",
+    "com.unity.xr.interaction.toolkit": "3.0.8",
+    "com.unity.sentis": "2.1.3",
+    "com.unity.xr.arfoundation": "6.0.3"
+  },
+  "keywords": [
+    "unity",
+    "yolo",
+    "object detection"
+  ],
+  "author": {
+    "name": "Matthew Lyon",
+    "email": "lyonmatthew2003@hotmail.com",
+    "url": "https://www.matthewlyon.co.uk"
+  }
+}
+

@@ -1,0 +1,17 @@
+{
+    "name": "YOLOTools.YOLO.ObjectDetection.Utilities",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Sentis",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

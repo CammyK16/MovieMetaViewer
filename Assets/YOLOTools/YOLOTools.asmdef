@@ -1,0 +1,22 @@
+{
+    "name": "YOLOTools",
+    "rootNamespace": "",
+    "references": [
+        "YOLOTools.YOLO.ObjectDetection",
+        "YOLOTools.YOLO.ObjectDetection.Utilities",
+        "YOLOTools.Inference",
+        "YOLOTools.YOLO",
+        "YOLOTools.YOLO.RemoteYOLO",
+        "Unity.Sentis",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

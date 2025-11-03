@@ -1,0 +1,20 @@
+{
+    "name": "YOLOTools.PassthroughCamera",
+    "rootNamespace": "",
+    "references": [
+        "GUID:f5eda1afa2a1241a59c4db6830e1c890",
+        "GUID:4af21795022437d4bb139a86514b9ff9",
+        "GUID:f64c9ebcd7899c3448a08dc9f9ddbe30",
+        "GUID:d955e6215bf0bb7499e32b4c6f46507e",
+        "GUID:48c9f6afdac61634db0e0f241c7d4d51"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

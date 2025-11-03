@@ -1,0 +1,24 @@
+{
+    "name": "YOLOTools.YOLO.Display",
+    "rootNamespace": "",
+    "references": [
+        "AYellowpaper.SerializedCollections",
+        "meta.xr.mrutilitykit",
+        "Unity.XR.Oculus",
+        "MyBox",
+        "YOLOTools.PassthroughCamera",
+        "YOLOTools.Utilities",
+        "YOLOTools.YOLO.ObjectDetection"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

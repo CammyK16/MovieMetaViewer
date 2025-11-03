@@ -1,0 +1,16 @@
+{
+    "name": "YOLOTools.Utilities",
+    "rootNamespace": "",
+    "references": [
+        "GUID:9e83e6daa24565045911f25db37dfecf"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

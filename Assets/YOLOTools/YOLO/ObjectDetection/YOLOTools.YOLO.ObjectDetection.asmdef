@@ -1,0 +1,26 @@
+{
+    "name": "YOLOTools.YOLO.ObjectDetection",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Sentis",
+        "Unity.Sentis.ONNX",
+        "Unity.Sentis.Editor",
+        "Unity.Sentis.Editor.Tests",
+        "Unity.Sentis.iOSBLAS",
+        "Unity.Sentis.MacBLAS",
+        "Unity.TextMeshPro",
+        "YOLOTools.Inference",
+        "YOLOTools.Utilities",
+        "YOLOTools.YOLO.ObjectDetection.Utilities",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
