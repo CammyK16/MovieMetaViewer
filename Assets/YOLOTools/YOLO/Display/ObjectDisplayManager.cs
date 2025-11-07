@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using YOLOTools.Utilities;
 using YOLOTools.YOLO.ObjectDetection;
+using TMPro;
 
 namespace YOLOTools.YOLO.Display
 {
@@ -192,6 +193,17 @@ namespace YOLOTools.YOLO.Display
             if (!useRaycastNormal) model.transform.LookAt(_camera.transform);
 
             model.name = $"{obj.CocoName} {id}";
+
+            TextMeshPro label = model.GetComponentInChildren<TextMeshPro>();
+            if (label != null)
+            {
+                Debug.Log($"ObjectDisplayManager::UpdateModel - Setting text to {obj.MovieID}");
+                label.text = obj.MovieID;
+            } else
+            {
+                Debug.LogError("ObjectDisplayManager::UpdateModel - Failed to get TMPro object!");
+            }
+
             RescaleObject(obj, model);
             model.SetActive(true);
         }

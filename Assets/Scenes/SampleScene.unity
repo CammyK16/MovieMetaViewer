@@ -680,8 +680,12 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
+      propertyPath: _scaleType
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _maxModelCount
-      value: 10
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _videoFeedManager
@@ -693,11 +697,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _cocoModels._serializedList.Array.size
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _cocoModels._serializedList.Array.data[0].Key
-      value: tv
+      value: poster
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _cocoModels._serializedList.Array.data[1].Key
@@ -784,6 +788,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1314615642}
     - target: {fileID: 5926753334168856719, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
+      propertyPath: m_YOLOModel
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5926753334168856719, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
+      propertyPath: m_YOLOFormat
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5926753334168856719, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: m_referenceCamera
       value: 
       objectReference: {fileID: 1901652088}
@@ -793,7 +805,7 @@ PrefabInstance:
       objectReference: {fileID: 1769441745}
     - target: {fileID: 5926753334168856719, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: m_remoteYOLOProcessorAddress
-      value: 192.168.2.242:44777
+      value: 192.168.2.244:44777
       objectReference: {fileID: 0}
     - target: {fileID: 9130492846640240184, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: m_LocalPosition.x

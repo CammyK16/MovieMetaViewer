@@ -8,7 +8,8 @@
         "MyBox",
         "YOLOTools.PassthroughCamera",
         "YOLOTools.Utilities",
-        "YOLOTools.YOLO.ObjectDetection"
+        "YOLOTools.YOLO.ObjectDetection",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

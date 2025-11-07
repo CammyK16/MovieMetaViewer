@@ -231,6 +231,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
         public int class_id;
         public float confidence;
         public RemoteYOLOResultBox box;
+        public string movie_id;
     }
 
     public struct RemoteYOLOResultBox
@@ -253,6 +254,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
         YOLO11N,
         YOLO11S,
         YOLO11M,
-        YOLO11L
+        YOLO11L,
+        YOLOPOSTER
     }
 }

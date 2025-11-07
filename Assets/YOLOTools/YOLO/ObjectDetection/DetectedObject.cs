@@ -9,13 +9,16 @@ namespace YOLOTools.YOLO.ObjectDetection
         public int CocoClass { get; private set; }
         [CanBeNull] public string CocoName { get; private set; }
         public float Confidence { get; private set; }
+        public string MovieID { get; private set; }
 
-        public DetectedObject(float centreX, float centreY, float width, float height, int cocoClass, string cocoName, float confidence)
+        public DetectedObject(float centreX, float centreY, float width, float height, int cocoClass, string cocoName, float confidence, string movieID)
         {
             CocoClass = cocoClass;
             CocoName = cocoName;
             Confidence = confidence;
             BoundingBox = new Rect((int)centreX-(width/2), (int)centreY-(height/2), (int)width, (int)height);
+            MovieID = movieID;
+
         }
     }
 }
