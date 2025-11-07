@@ -10,6 +10,7 @@ using UnityEngine.Profiling;
 using YOLOTools.Utilities;
 using YOLOTools.YOLO.ObjectDetection;
 using TMPro;
+using TMDbTools;
 
 namespace YOLOTools.YOLO.Display
 {
@@ -21,9 +22,9 @@ namespace YOLOTools.YOLO.Display
 
         private int _modelCount;
         [Tooltip("The maximum number of models which can spawn at once.")]
-        [PositiveValueOnly] [SerializeField] private int _maxModelCount = 10;
+        [PositiveValueOnly][SerializeField] private int _maxModelCount = 10;
         [Tooltip("The minimum distance from an existing model at which a model of the same class can spawn.")]
-        [PositiveValueOnly] [SerializeField] private float _distanceThreshold = 1f;
+        [PositiveValueOnly][SerializeField] private float _distanceThreshold = 1f;
 
         [Tooltip("The names of the COCO classes to detect and their associated models.")]
         [SerializeField, SerializedDictionary("Coco Class", "3D Model")]
@@ -39,16 +40,16 @@ namespace YOLOTools.YOLO.Display
 
         [Tooltip("The scaling method to use:\nMIN: Use the minimum of the x and y scale change.\nMAX: Use the maximum of the x and y scale change.\nAVERAGE: Use the average of both the x and y scale change.\nWIDTH: Use the x scale change.\nHEIGHT: Use the y scale change.")]
         [SerializeField] private ScaleType _scaleType = ScaleType.AVERAGE;
-        
+
         private const float ScaleDampener = 0f;
-        
-        
+
+
         #endregion
 
         #region External Data Management
 
         [Tooltip("The VideoFeedManager used to capture input frames.")]
-        [MustBeAssigned] [SerializeField] private VideoFeedManager _videoFeedManager;
+        [MustBeAssigned][SerializeField] private VideoFeedManager _videoFeedManager;
 
         private Camera _camera;
 
@@ -90,7 +91,7 @@ namespace YOLOTools.YOLO.Display
             foreach (var obj in objects)
             {
                 if (obj.CocoName == null) continue;
-                
+
                 if (objectCounts.GetValueOrDefault(obj.CocoClass) == 3) continue;
 
                 if (!_cocoModels.ContainsKey(obj.CocoName) || _cocoModels[obj.CocoName] == null)
@@ -109,14 +110,14 @@ namespace YOLOTools.YOLO.Display
                 }
 
                 (Vector3 spawnPosition, Quaternion spawnRotation, float hitConfidence) = GetObjectWorldCoordinates(obj);
-                
+
                 if (IsDuplicate(spawnPosition, modelList)) continue;
 
                 if (!objectCounts.TryAdd(obj.CocoClass, 1))
                 {
                     objectCounts[obj.CocoClass]++;
                 }
-                
+
                 if ((!MovingObjects || objectCounts[obj.CocoClass] > modelList.Count) && ModelCount != MaxModelCount)
                 {
                     var model = Instantiate(_cocoModels[obj.CocoName]);
@@ -152,8 +153,8 @@ namespace YOLOTools.YOLO.Display
             _activeModels.Clear();
             _modelCount = 0;
         }
-        
-        
+
+
         private void RescaleObject(DetectedObject obj, GameObject model)
         {
 
@@ -179,7 +180,7 @@ namespace YOLOTools.YOLO.Display
                 ScaleType.MAX => Math.Max(newWidth / currentWidth, newHeight / currentHeight),
                 _ => 1f
             };
-            scaleFactor *= 1f-ScaleDampener;
+            scaleFactor *= 1f - ScaleDampener;
             if (float.IsInfinity(scaleFactor)) scaleFactor = 1f;
             Debug.Log($"Scale Factor for {obj.CocoName}: {scaleFactor}");
             Vector3 scaleVector = new(scaleFactor, scaleFactor, scaleFactor);
@@ -197,15 +198,31 @@ namespace YOLOTools.YOLO.Display
             TextMeshPro label = model.GetComponentInChildren<TextMeshPro>();
             if (label != null)
             {
-                Debug.Log($"ObjectDisplayManager::UpdateModel - Setting text to {obj.MovieID}");
-                label.text = obj.MovieID;
-            } else
+                Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
+                label.text = "Loading...";
+                UpdateMovieLabel(label, obj.MovieID);
+            }
+            else
             {
                 Debug.LogError("ObjectDisplayManager::UpdateModel - Failed to get TMPro object!");
             }
 
             RescaleObject(obj, model);
             model.SetActive(true);
+        }
+
+        private async void UpdateMovieLabel(TextMeshPro label, string movieID)
+        {
+            var movieName = await TMDb.GetMovieNameFromID(movieID);
+            if (label != null && movieName != null)
+            {
+                Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Setting text to {movieName}");
+                label.text = movieName;
+            } else if (movieName == null)
+            {
+                Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Couldn't find ID {movieID}");
+                label.text = "Not Found";
+            }
         }
 
         private bool IsDuplicate(Vector3 spawnPosition, Dictionary<int, GameObject> modelList)
@@ -232,13 +249,13 @@ namespace YOLOTools.YOLO.Display
             Vector3 position;
             Quaternion rotation;
             float hitConfidence = 1;
-            
+
             if (_environmentRaycastManager && _environmentRaycastManager.isActiveAndEnabled && EnvironmentRaycastManager.IsSupported)
             {
                 var screenPoint = ImageToScreenCoordinates(obj.BoundingBox.center);
                 // If you use Camera.MonoOrStereoscopicEye.Left then objects display off centre, even though the view is from the left eye, and the whole point of that flag is to account for that. Oh, also it's offset in the Y by about 200 pixels for some reason when you use Mono.
                 if (_environmentRaycastManager.Raycast(
-                            _camera.ScreenPointToRay(screenPoint, Camera.MonoOrStereoscopicEye.Mono), out var hit)) 
+                            _camera.ScreenPointToRay(screenPoint, Camera.MonoOrStereoscopicEye.Mono), out var hit))
                 {
                     position = hit.point;
                     rotation = Quaternion.LookRotation(hit.normal);
@@ -359,7 +376,7 @@ namespace YOLOTools.YOLO.Display
         {
 
             var screenPoint = ImageToScreenCoordinates(coordinates);
-            
+
             const float spawnDepth = 1.5f;
             if (_sceneLoaded && _currentRoom)
             {
@@ -385,8 +402,8 @@ namespace YOLOTools.YOLO.Display
             var newY = (feedDimensions.Height - coordinates.y) + yOffset;
 
             // 200 pixel offset when using the Camera.MonoOrStereoscopicEye.Mono flag.
-            return new Vector2(newX, newY-200f);
-            
+            return new Vector2(newX, newY - 200f);
+
         }
 
         private void OnSceneLoad()

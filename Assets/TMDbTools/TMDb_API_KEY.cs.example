@@ -1,0 +1,7 @@
+namespace TMDbTools
+{
+    public class TMDb_API_KEY
+    {
+        public const string TMDB_API_KEY = "";
+    }
+}

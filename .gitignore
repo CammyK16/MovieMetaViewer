@@ -97,3 +97,7 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Don't include the TMDb API key
+/[Aa]ssets/TMDbTools/TMDb_API_KEY.cs
+/[Aa]ssets/TMDbTools/TMDb_API_KEY.cs.meta

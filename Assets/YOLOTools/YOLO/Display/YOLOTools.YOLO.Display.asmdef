@@ -9,7 +9,8 @@
         "YOLOTools.PassthroughCamera",
         "YOLOTools.Utilities",
         "YOLOTools.YOLO.ObjectDetection",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "TMBbTools"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
