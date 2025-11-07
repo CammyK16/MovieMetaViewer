@@ -685,7 +685,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _maxModelCount
-      value: 5
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _videoFeedManager

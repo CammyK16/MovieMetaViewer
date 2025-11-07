@@ -92,8 +92,6 @@ namespace YOLOTools.YOLO.Display
             {
                 if (obj.CocoName == null) continue;
 
-                if (objectCounts.GetValueOrDefault(obj.CocoClass) == 3) continue;
-
                 if (!_cocoModels.ContainsKey(obj.CocoName) || _cocoModels[obj.CocoName] == null)
                 {
                     Debug.Log("Error: No model provided for the detected class.");
