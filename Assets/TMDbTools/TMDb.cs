@@ -3,11 +3,14 @@ using System;
 using UnityEngine.Networking;
 using System.Threading.Tasks;
 using static TMDbTools.TMDb_API_KEY;
+using System.Collections.Concurrent;
 
 namespace TMDbTools
 {
     public class TMDb
     {
+        public static ConcurrentDictionary<string, MovieInfo> knownIds = new ConcurrentDictionary<string, MovieInfo>();
+
         private const string API_KEY = TMDB_API_KEY;
         
         /// <summary>
@@ -15,13 +18,19 @@ namespace TMDbTools
         /// </summary>
         /// <param name="movieID">The movie ID to be queried</param>
         /// <returns>Returns a <see cref="MovieInfo"/> object with all movie information</returns>  
-        private async static Task<MovieInfo> GetMovieInfo(string movieID)
+        public async static Task<MovieInfo> GetMovieInfo(string movieID)
         {
             if (string.IsNullOrEmpty(movieID))
             {
                 throw new ArgumentNullException("movieID cannot be null");
             }
 
+            if (knownIds.ContainsKey(movieID))
+            {
+                Debug.Log($"TMDbTools::GetMovieInfo - Found ID {movieID} in dictionary");
+                return knownIds[movieID];
+            } 
+                
             using (UnityWebRequest request = UnityWebRequest.Get($"https://api.themoviedb.org/3/movie/{movieID}?language=en-US"))
             {
                 request.SetRequestHeader("Authorization", $"Bearer {API_KEY}");
@@ -36,7 +45,8 @@ namespace TMDbTools
                     string jsonResponse = request.downloadHandler.text;
                     MovieInfo info = JsonUtility.FromJson<MovieInfo>(jsonResponse);
                     Debug.Log($"TMDbTools::GetMovieInfo - response title = {info.original_title}");
-                    return info;
+                    knownIds.GetOrAdd(movieID, info);
+                    return knownIds[movieID];
                 } else
                 {
                     Debug.LogError($"TMDbTools::GetMovieInfo - Error: {request.error}");
