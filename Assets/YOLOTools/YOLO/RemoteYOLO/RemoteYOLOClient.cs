@@ -14,7 +14,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
         private HttpClient _client;
 
         private static string _customModelEndpoint = "/api/custom-model";
-        private static string _analyseEndpoint = "/api/analyse";
+        private static string _analyseEndpoint = "/api/analyse-sort";
         
         public RemoteYOLOClient(string baseAddress)
         {
@@ -127,6 +127,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
             if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Request failed: {response.StatusCode} {await response.Content.ReadAsStringAsync()}");
             
             var responseString = await response.Content.ReadAsStringAsync();
+            Debug.Log($"RemoteYOLOClient::AnalyseAsync - Got response: {responseString}");
             return JsonConvert.DeserializeObject<RemoteYOLOAnalyseResponse>(responseString);
         }
 
@@ -225,13 +226,20 @@ namespace YOLOTools.YOLO.RemoteYOLO
         public float postprocess;
     }
 
+    public class RemoteYOLOMoviePrediction
+    {
+        public string prediction;
+        public float confidence;
+    }
+
     public class RemoteYOLOAnalysePredictionResult
     {
         public string name;
         public int class_id;
         public float confidence;
         public RemoteYOLOResultBox box;
-        public string movie_id;
+        public RemoteYOLOMoviePrediction movie_id;
+        public int track_id;
     }
 
     public struct RemoteYOLOResultBox

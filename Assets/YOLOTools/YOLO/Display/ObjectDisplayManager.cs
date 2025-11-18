@@ -87,6 +87,7 @@ namespace YOLOTools.YOLO.Display
             _camera = referenceCamera;
 
             Dictionary<int, int> objectCounts = new();
+            HashSet<int> activeThisFrame = new HashSet<int>();
 
             foreach (var obj in objects)
             {
@@ -107,29 +108,62 @@ namespace YOLOTools.YOLO.Display
                     _activeModels.Add(obj.CocoClass, modelList);
                 }
 
+                activeThisFrame.Add(obj.TrackID);
+
                 (Vector3 spawnPosition, Quaternion spawnRotation, float hitConfidence) = GetObjectWorldCoordinates(obj);
 
-                if (IsDuplicate(spawnPosition, modelList)) continue;
+                // if (IsDuplicate(spawnPosition, modelList)) continue;
 
                 if (!objectCounts.TryAdd(obj.CocoClass, 1))
                 {
                     objectCounts[obj.CocoClass]++;
                 }
 
-                if ((!MovingObjects || objectCounts[obj.CocoClass] > modelList.Count) && ModelCount != MaxModelCount)
+                // if ((!MovingObjects || objectCounts[obj.CocoClass] > modelList.Count) && ModelCount != MaxModelCount)
+                // {
+                //     var model = Instantiate(_cocoModels[obj.CocoName]);
+                //     modelList.Add(modelList.Count, model);
+                //     UpdateModel(obj, objectCounts[obj.CocoClass], spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
+                //     ModelCount++;
+                // }
+                // else if (objectCounts[obj.CocoClass] <= modelList.Count)
+                // {
+                //     if (MovingObjects)
+                //     {
+                //         var model = modelList[objectCounts[obj.CocoClass] - 1];
+                //         UpdateModel(obj, objectCounts[obj.CocoClass], spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
+                //     }
+                // }
+
+                if (modelList.TryGetValue(obj.TrackID, out var existingModel))
                 {
+                    // Already got object for this movie, move it
+                    UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, existingModel, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
+                }
+                else
+                {
+                    // Dont have object for this move, make a new one 
+                    if (ModelCount >= MaxModelCount) continue;
+
+                    if (IsDuplicate(spawnPosition, modelList.Values.ToDictionary(go => go.GetInstanceID(), go => go))) continue;
+
                     var model = Instantiate(_cocoModels[obj.CocoName]);
-                    modelList.Add(modelList.Count, model);
-                    UpdateModel(obj, objectCounts[obj.CocoClass], spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
+                    modelList.Add(obj.TrackID, model);
+                    UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
                     ModelCount++;
                 }
-                else if (objectCounts[obj.CocoClass] <= modelList.Count)
+            }
+
+            foreach (var entry in _activeModels)
+            {
+                var entryDict = entry.Value;
+                var toRemove = entryDict.Where(kvp => !activeThisFrame.Contains(kvp.Key)).Select(kvp => kvp.Key).ToList();
+         
+                foreach (var idToRemove in toRemove)
                 {
-                    if (MovingObjects)
-                    {
-                        var model = modelList[objectCounts[obj.CocoClass] - 1];
-                        UpdateModel(obj, objectCounts[obj.CocoClass], spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
-                    }
+                    Destroy(entryDict[idToRemove]);
+                    entryDict.Remove(idToRemove);
+                    ModelCount--;
                 }
             }
 
@@ -198,7 +232,7 @@ namespace YOLOTools.YOLO.Display
             {
                 Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
                 label.text = "Loading...";
-                UpdateMovieLabel(label, obj.MovieID);
+                UpdateMovieLabel(label, obj.MovieID, obj.TrackID, obj.Confidence);
             }
             else
             {
@@ -209,13 +243,13 @@ namespace YOLOTools.YOLO.Display
             model.SetActive(true);
         }
 
-        private async void UpdateMovieLabel(TextMeshPro label, string movieID)
+        private async void UpdateMovieLabel(TextMeshPro label, string movieID, int id = -2, float confidence = 0f)
         {
             var movieName = await TMDb.GetMovieNameFromID(movieID);
             if (label != null && movieName != null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Setting text to {movieName}");
-                label.text = movieName;
+                label.text = $"{movieName}\n{id.ToString()} - {confidence.ToString("0.00")}";
             } else if (movieName == null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Couldn't find ID {movieID}");
@@ -400,7 +434,7 @@ namespace YOLOTools.YOLO.Display
             var newY = (feedDimensions.Height - coordinates.y) + yOffset;
 
             // 200 pixel offset when using the Camera.MonoOrStereoscopicEye.Mono flag.
-            return new Vector2(newX, newY - 200f);
+            return new Vector2(newX - 100f, newY - 200f);
 
         }
 
