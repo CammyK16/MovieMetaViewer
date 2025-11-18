@@ -685,7 +685,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _maxModelCount
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _videoFeedManager
@@ -710,7 +710,7 @@ PrefabInstance:
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _cocoModels._serializedList.Array.data[0].Value
       value: 
-      objectReference: {fileID: 1802804698819089513, guid: fb6b6681063e73c4bbe4b0fa9b377189, type: 3}
+      objectReference: {fileID: 1802804698819089513, guid: 7146887e59ed8d64a82c838dd04f39ea, type: 3}
     - target: {fileID: 5051711198060898444, guid: 228c2db4c388d4748b4ca24b4e7fff0e, type: 3}
       propertyPath: _cocoModels._serializedList.Array.data[1].Value
       value: 
@@ -806,6 +806,10 @@ PrefabInstance:
     - target: {fileID: 5926753334168856719, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: m_remoteYOLOProcessorAddress
       value: 192.168.2.244:44777
+      objectReference: {fileID: 0}
+    - target: {fileID: 6643175488489823232, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
+      propertyPath: near clip plane
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 9130492846640240184, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: m_LocalPosition.x
