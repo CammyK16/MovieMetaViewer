@@ -15,6 +15,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
 
         private static string _customModelEndpoint = "/api/custom-model";
         private static string _analyseEndpoint = "/api/analyse-sort";
+        private static string _resetEndpoint = "/api/reset";
         
         public RemoteYOLOClient(string baseAddress)
         {
@@ -166,6 +167,22 @@ namespace YOLOTools.YOLO.RemoteYOLO
             var responseString = response.Content.ReadAsStringAsync().Result;
             return JsonConvert.DeserializeObject<RemoteYOLOAnalyseResponse>(responseString);
         }
+
+        public RemoteYOLOResetResponse Reset()
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, $"http://{BaseAddress}{_resetEndpoint}");
+            using HttpResponseMessage response = _client.SendAsync(request).Result;
+
+            if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                throw new HttpRequestException(JsonConvert
+                    .DeserializeObject<AnalyseFailureResponse>(response.Content.ReadAsStringAsync().Result).error);
+            }
+            if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Request failed: {response.StatusCode} {response.Content.ReadAsStringAsync().Result}");
+
+            var responseString = response.Content.ReadAsStringAsync().Result;
+            return JsonConvert.DeserializeObject<RemoteYOLOResetResponse>(responseString);
+        }
         
         private struct CustomModelFailureResponse
         {
@@ -264,5 +281,10 @@ namespace YOLOTools.YOLO.RemoteYOLO
         YOLO11M,
         YOLO11L,
         YOLOPOSTER
+    }
+
+    public struct RemoteYOLOResetResponse
+    {
+        public bool success;
     }
 }

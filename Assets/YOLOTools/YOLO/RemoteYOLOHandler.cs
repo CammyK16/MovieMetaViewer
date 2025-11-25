@@ -86,6 +86,8 @@ namespace YOLOTools.YOLO
                     m_useCustomModel = false;
                 }
             }
+
+            m_remoteYOLOClient.Reset();
         }
 
         private void Update()
