@@ -35,6 +35,9 @@ namespace YOLOTools.YOLO
         [MustBeAssigned]
         [Tooltip("The base camera for scene analysis")]
         [SerializeField] private Camera m_referenceCamera;
+        [Space(30f)]
+        [SerializeField] private OVRInput.RawButton m_stopInferenceButton = OVRInput.RawButton.A;
+        private bool shouldRun = true;
 
         #endregion
         
@@ -92,7 +95,13 @@ namespace YOLOTools.YOLO
 
         private void Update()
         {
-            if (m_inferencePending) return;
+            // Toggle running inference if A button is pressed
+            if (OVRInput.GetUp(m_stopInferenceButton))
+            {
+                shouldRun = shouldRun ? false : true;
+            }
+
+            if (m_inferencePending || !shouldRun) return;
             
             try
             {
