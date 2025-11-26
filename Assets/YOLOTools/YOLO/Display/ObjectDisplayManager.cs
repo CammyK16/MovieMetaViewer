@@ -43,7 +43,6 @@ namespace YOLOTools.YOLO.Display
 
         private const float ScaleDampener = 0f;
 
-
         #endregion
 
         #region External Data Management
@@ -415,7 +414,7 @@ namespace YOLOTools.YOLO.Display
             var newY = (feedDimensions.Height - coordinates.y) + yOffset;
 
             // 200 pixel offset when using the Camera.MonoOrStereoscopicEye.Mono flag.
-            return new Vector2(newX - 50f, newY - 200f);
+            return new Vector2(newX, newY - 200f);
 
         }
 

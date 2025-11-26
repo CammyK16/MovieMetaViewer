@@ -11,7 +11,8 @@
         "YOLOTools.YOLO.ObjectDetection",
         "YOLOTools.YOLO.Display",
         "YOLOTools.YOLO.ObjectDetection.Utilities",
-        "Unity.InferenceEngine"
+        "Unity.InferenceEngine",
+        "Oculus.VR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
