@@ -267,7 +267,7 @@ namespace YOLOTools.YOLO.Display
                 var screenPoint = ImageToScreenCoordinates(obj.BoundingBox.center);
                 // If you use Camera.MonoOrStereoscopicEye.Left then objects display off centre, even though the view is from the left eye, and the whole point of that flag is to account for that. Oh, also it's offset in the Y by about 200 pixels for some reason when you use Mono.
                 if (_environmentRaycastManager.Raycast(
-                            _camera.ScreenPointToRay(screenPoint, Camera.MonoOrStereoscopicEye.Mono), out var hit))
+                            _camera.ScreenPointToRay(screenPoint), out var hit))
                 {
                     position = hit.point;
                     rotation = Quaternion.LookRotation(hit.normal);
@@ -365,7 +365,7 @@ namespace YOLOTools.YOLO.Display
                 for (int j = 0; j < spreadWidth; j++)
                 {
                     if (i == spreadHeight / 2 && j == spreadWidth / 2) continue;
-                    rayPoints[i, j] = ImageToScreenCoordinates(new Vector2(currentX, currentY));
+                    rayPoints[i, j] = new Vector2(currentX, currentY);
                     currentX += xDist;
                 }
 
@@ -392,7 +392,7 @@ namespace YOLOTools.YOLO.Display
             const float spawnDepth = 1.5f;
             if (_sceneLoaded && _currentRoom)
             {
-                var ray = _camera.ScreenPointToRay(screenPoint, Camera.MonoOrStereoscopicEye.Mono);
+                var ray = _camera.ScreenPointToRay(screenPoint);
                 if (_currentRoom.Raycast(ray, 500, out var hit, out var anchor))
                 {
                     Debug.Log("Hit in image to world coordinates");
@@ -414,7 +414,7 @@ namespace YOLOTools.YOLO.Display
             var newY = (feedDimensions.Height - coordinates.y) + yOffset;
 
             // 200 pixel offset when using the Camera.MonoOrStereoscopicEye.Mono flag.
-            return new Vector2(newX, newY - 200f);
+            return new Vector2(newX-50f, newY-200f);
 
         }
 
