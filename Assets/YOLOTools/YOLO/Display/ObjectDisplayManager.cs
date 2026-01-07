@@ -11,6 +11,8 @@ using YOLOTools.Utilities;
 using YOLOTools.YOLO.ObjectDetection;
 using TMPro;
 using TMDbTools;
+using Oculus.Interaction;
+using UnityEngine.UI;
 
 namespace YOLOTools.YOLO.Display
 {
@@ -19,6 +21,8 @@ namespace YOLOTools.YOLO.Display
         #region Model Management
 
         private Dictionary<int, Dictionary<int, GameObject>> _activeModels;
+        private GameObject _currentFocusedObject;
+        public bool isFocusMode = false;
 
         private int _modelCount;
         [Tooltip("The maximum number of models which can spawn at once.")]
@@ -132,6 +136,37 @@ namespace YOLOTools.YOLO.Display
                     modelList.Add(obj.TrackID, model);
                     UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
                     ModelCount++;
+
+                    // Ray Interaction
+                    var currentDetectedObject = obj;
+                    var interactable = model.GetComponentInChildren<RayInteractable>();
+
+                    if (interactable != null)
+                    {
+                        interactable.WhenSelectingInteractorViewAdded += (interactor) => OnModelSelected(model, obj.MovieID);
+                    } else
+                    {
+                        Debug.LogWarning("ObjectDisplayManager::DisplayModels - No RayInteractable found!");
+                    }
+
+                    // Set up UI
+                    Canvas modelCanvas = model.GetComponentInChildren<Canvas>();
+                    if (modelCanvas != null)
+                    {
+                        modelCanvas.gameObject.SetActive(false);
+
+                        Button[] buttons = modelCanvas.GetComponentsInChildren<Button>();
+                        Button restoreButton = buttons.FirstOrDefault(b=> b.name == "RestoreButton");
+
+                        if (restoreButton != null)
+                        {
+                            Debug.Log("ObjectDisplayManager::DisplayModels - RestoreButton found!");
+                            restoreButton.onClick.AddListener(ExitFocusMode);
+                        } else
+                        {
+                            Debug.Log("ObjectDisplayManager::DisplayModels - No RestoreButton found!");
+                        }
+                    }
                 }
             }
 
@@ -149,6 +184,62 @@ namespace YOLOTools.YOLO.Display
             }
 
             Profiler.EndSample();
+        }
+
+        private void OnModelSelected(GameObject selectedModel, string movieID)
+        {
+            if (isFocusMode) return;
+
+            Debug.Log($"ObjectDisplayManager::DisplayModels - TRIGGER PRESSED ON MOVIE!");
+
+            isFocusMode = true;
+            _currentFocusedObject = selectedModel;
+
+            foreach (var classGroup in _activeModels.Values)
+            {
+                foreach (var model in classGroup.Values)
+                {
+                    if (model == selectedModel)
+                    {
+                        var canvas = model.GetComponentInChildren<Canvas>(true); 
+                        var TMProMeshes = canvas.GetComponentsInChildren<TMP_Text>();
+                        TMP_Text titleText = TMProMeshes.FirstOrDefault(t=> t.name == "UITitle");
+                        TMP_Text detailsText = TMProMeshes.FirstOrDefault(t=> t.name == "UIDetails");
+                        UpdateMovieDetails(titleText, detailsText, movieID);
+
+                        if (canvas) canvas.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        model.SetActive(false);
+                    }
+                }
+            }
+        }
+
+        public void ExitFocusMode()
+        {
+            Debug.Log("ObjectDisplayManager::ExitFocusMode - Exiting focus mode");
+            if (_currentFocusedObject != null)
+            {
+                var canvas = _currentFocusedObject.GetComponentInChildren<Canvas>(true);
+                if (canvas)
+                {
+                    canvas.gameObject.SetActive(false);
+                }
+
+                _currentFocusedObject = null;
+
+                foreach (var classGroup in _activeModels.Values)
+                {
+                    foreach (var model in classGroup.Values)
+                    {
+                        if (model != null) model.SetActive(true);
+                    }
+                }
+
+                isFocusMode = false;
+            }
         }
 
         #region Model Methods
@@ -234,6 +325,19 @@ namespace YOLOTools.YOLO.Display
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Couldn't find ID {movieID}");
                 label.text = "Not Found";
+            }
+        }
+
+        private async void UpdateMovieDetails(TMP_Text title, TMP_Text details, string movieID)
+        {
+            var movieName = await TMDb.GetMovieNameFromID(movieID);
+            if (title != null && movieName != null)
+            {
+                title.text = $"{movieName}";
+            } else if (movieName == null)
+            {
+                Debug.Log($"ObjectDisplayManager::UpdateMovieDetails - Couldn't find ID {movieID}");
+                title.text = "Not Found";
             }
         }
 
@@ -414,7 +518,7 @@ namespace YOLOTools.YOLO.Display
             var newY = (feedDimensions.Height - coordinates.y) + yOffset;
 
             // 200 pixel offset when using the Camera.MonoOrStereoscopicEye.Mono flag.
-            return new Vector2(newX-50f, newY-200f);
+            return new Vector2(newX, newY-200f);
 
         }
 
