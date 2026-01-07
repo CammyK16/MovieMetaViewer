@@ -10,7 +10,8 @@
         "YOLOTools.Utilities",
         "YOLOTools.YOLO.ObjectDetection",
         "Unity.TextMeshPro",
-        "TMBbTools"
+        "TMBbTools",
+        "Oculus.Interaction"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
