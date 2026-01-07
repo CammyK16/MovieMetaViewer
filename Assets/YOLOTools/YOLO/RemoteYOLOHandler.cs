@@ -95,10 +95,13 @@ namespace YOLOTools.YOLO
 
         private void Update()
         {
-            // Toggle running inference if A button is pressed
+            // Toggle running inference if A button is pressed, or we have selected a movie to view
             if (OVRInput.GetUp(m_stopInferenceButton))
             {
                 shouldRun = shouldRun ? false : true;
+            } else
+            {
+                shouldRun = !m_objectDisplayManager.isFocusMode;
             }
 
             if (m_inferencePending || !shouldRun) return;
