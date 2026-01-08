@@ -111,6 +111,7 @@ namespace TMDbTools
         public int popularity;
         public string poster_path;
         public ProductionCompany[] production_companies;
+        public ProductionCountry[] production_countries;
         public string release_date;
         public int revenue;
         public int runtime;
