@@ -207,7 +207,11 @@ namespace YOLOTools.YOLO.Display
                         TMP_Text detailsText = TMProMeshes.FirstOrDefault(t=> t.name == "UIDetails");
                         UpdateMovieDetails(titleText, detailsText, movieID);
 
-                        if (canvas) canvas.gameObject.SetActive(true);
+                        if (canvas) 
+                        {
+                            canvas.gameObject.SetActive(true);
+                            canvas.GetComponent<SpawnFacingUser>().FaceUser();
+                        }
                     }
                     else
                     {
