@@ -150,10 +150,11 @@ namespace YOLOTools.YOLO.Display
                     }
 
                     // Set up UI
-                    Canvas modelCanvas = model.GetComponentInChildren<Canvas>();
+                    Canvas modelCanvas = model.GetComponentInChildren<Canvas>(true);
+
                     if (modelCanvas != null)
                     {
-                        modelCanvas.gameObject.SetActive(false);
+                        SetUiVisible(model, false);
 
                         Button[] buttons = modelCanvas.GetComponentsInChildren<Button>();
                         Button restoreButton = buttons.FirstOrDefault(b=> b.name == "RestoreButton");
@@ -209,8 +210,7 @@ namespace YOLOTools.YOLO.Display
 
                         if (canvas) 
                         {
-                            canvas.gameObject.SetActive(true);
-                            canvas.GetComponent<SpawnFacingUser>().FaceUser();
+                            SetUiVisible(model, true);
                         }
                     }
                     else
@@ -226,11 +226,7 @@ namespace YOLOTools.YOLO.Display
             Debug.Log("ObjectDisplayManager::ExitFocusMode - Exiting focus mode");
             if (_currentFocusedObject != null)
             {
-                var canvas = _currentFocusedObject.GetComponentInChildren<Canvas>(true);
-                if (canvas)
-                {
-                    canvas.gameObject.SetActive(false);
-                }
+                SetUiVisible(_currentFocusedObject, false);
 
                 _currentFocusedObject = null;
 
@@ -363,6 +359,20 @@ namespace YOLOTools.YOLO.Display
         #endregion
 
         #region Helper Methods
+
+        private Transform GetUiRoot(Canvas canvas)
+        {
+            return canvas.transform.parent;
+        }
+
+        private void SetUiVisible(GameObject model, bool visible)
+        {
+            var canvas = model.GetComponentInChildren<Canvas>(true);
+            if (!canvas) return;
+
+            var uiRoot = GetUiRoot(canvas);
+            uiRoot.gameObject.SetActive(visible);
+        }
 
         private (Vector3, Quaternion, float) GetObjectWorldCoordinates(DetectedObject obj)
         {
