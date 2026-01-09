@@ -211,6 +211,7 @@ namespace YOLOTools.YOLO.Display
                         if (canvas) 
                         {
                             SetUiVisible(model, true);
+                            canvas.GetComponent<SpawnFacingUser>().FaceUser();
                         }
                     }
                     else
