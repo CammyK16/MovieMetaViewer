@@ -4,4 +4,9 @@ namespace TMDbTools
     {
         public const string TMDB_API_KEY = "";
     }
+
+    public class OMDb_API_KEY
+    {
+        public const string OMDB_API_KEY = "";
+    }
 }

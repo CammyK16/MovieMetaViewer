@@ -331,11 +331,26 @@ namespace YOLOTools.YOLO.Display
 
         private async void UpdateMovieDetails(TMP_Text title, TMP_Text details, string movieID)
         {
-            var movieName = await TMDb.GetMovieNameFromID(movieID);
-            if (title != null && movieName != null)
+            var tmdbMovieInfo = await TMDb.GetMovieInfo(movieID);
+            var omdbMovieInfo = await OMDb.GetOMDbInfo(tmdbMovieInfo.imdb_id);
+            if (title != null && tmdbMovieInfo != null && tmdbMovieInfo != null)
             {
-                title.text = $"{movieName}";
-            } else if (movieName == null)
+                title.text = tmdbMovieInfo.original_title;
+
+                var genres = string.Join(", ", tmdbMovieInfo.genres.Select(x => x.name));
+                var productionCompanyNames = string.Join("\n • ", tmdbMovieInfo.production_companies.Select(x => $"{x.name} ({x.origin_country})"));
+                var productionCountries = string.Join(", ", tmdbMovieInfo.production_countries.Select(x => x.name));
+                string rottenTomatoes;
+                try
+                {
+                    rottenTomatoes = omdbMovieInfo.Ratings[1].Value;
+                } catch
+                {
+                    rottenTomatoes = "N/A";
+                }
+
+                details.text = $"Rating: {tmdbMovieInfo.vote_average}\nRotten Tomatoes: {rottenTomatoes}\tIMDb: {omdbMovieInfo.imdbRating}\tMetacritic: {omdbMovieInfo.Metascore}\nGenres: {genres}\nProduction Companies:\n • {productionCompanyNames}\nProduction Countries: {productionCountries}\nBox Office: {omdbMovieInfo.BoxOffice}";
+            } else if (tmdbMovieInfo == null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieDetails - Couldn't find ID {movieID}");
                 title.text = "Not Found";
