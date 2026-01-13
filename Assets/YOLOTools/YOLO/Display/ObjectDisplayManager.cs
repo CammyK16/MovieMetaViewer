@@ -189,35 +189,35 @@ namespace YOLOTools.YOLO.Display
 
         private void OnModelSelected(GameObject selectedModel, string movieID)
         {
-            if (isFocusMode) return;
-
             Debug.Log($"ObjectDisplayManager::DisplayModels - TRIGGER PRESSED ON MOVIE!");
 
             isFocusMode = true;
             _currentFocusedObject = selectedModel;
 
+
             foreach (var classGroup in _activeModels.Values)
             {
                 foreach (var model in classGroup.Values)
                 {
-                    if (model == selectedModel)
-                    {
-                        var canvas = model.GetComponentInChildren<Canvas>(true); 
-                        var TMProMeshes = canvas.GetComponentsInChildren<TMP_Text>();
-                        TMP_Text titleText = TMProMeshes.FirstOrDefault(t=> t.name == "UITitle");
-                        TMP_Text detailsText = TMProMeshes.FirstOrDefault(t=> t.name == "UIDetails");
-                        UpdateMovieDetails(titleText, detailsText, movieID);
-
-                        if (canvas) 
-                        {
-                            SetUiVisible(model, true);
-                            canvas.GetComponent<SpawnFacingUser>().FaceUser();
-                        }
-                    }
-                    else
+                    if (model != null)
                     {
                         model.SetActive(false);
                     }
+                }
+            }
+
+            if (selectedModel != null)
+            {
+                selectedModel.SetActive(true);
+                var canvas = selectedModel.GetComponentInChildren<Canvas>(true); 
+                if (canvas) 
+                {
+                    var TMProMeshes = canvas.GetComponentsInChildren<TMP_Text>();
+                    TMP_Text titleText = TMProMeshes.FirstOrDefault(t=> t.name == "UITitle");
+                    TMP_Text detailsText = TMProMeshes.FirstOrDefault(t=> t.name == "UIDetails");
+                    UpdateMovieDetails(titleText, detailsText, movieID);
+                    SetUiVisible(selectedModel, true);
+                    canvas.GetComponent<SpawnFacingUser>().FaceUser();
                 }
             }
         }
@@ -313,7 +313,11 @@ namespace YOLOTools.YOLO.Display
             }
 
             RescaleObject(obj, model);
-            model.SetActive(true);
+
+            if (!isFocusMode || model == _currentFocusedObject)
+            {
+                model.SetActive(true);
+            }
         }
 
         private async void UpdateMovieLabel(TextMeshPro label, string movieID, int id = -2, float confidence = 0f)
