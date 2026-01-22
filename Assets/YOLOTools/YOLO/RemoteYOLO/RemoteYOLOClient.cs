@@ -253,6 +253,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
     {
         public string name;
         public int class_id;
+        public string crop;
         public float confidence;
         public RemoteYOLOResultBox box;
         public RemoteYOLOMoviePrediction movie_id;

@@ -47,6 +47,8 @@ namespace YOLOTools.YOLO.Display
 
         private const float ScaleDampener = 0f;
 
+        [SerializeField] private int rottenTomatoesThreshold = 0;
+
         #endregion
 
         #region External Data Management
@@ -217,7 +219,8 @@ namespace YOLOTools.YOLO.Display
                     TMP_Text detailsText = TMProMeshes.FirstOrDefault(t=> t.name == "UIDetails");
                     UpdateMovieDetails(titleText, detailsText, movieID);
                     SetUiVisible(selectedModel, true);
-                    canvas.GetComponent<SpawnFacingUser>().FaceUser();
+                    var uiRoot = GetUiRoot(canvas);
+                    uiRoot.GetComponent<SpawnFacingUser>().FaceUser();
                 }
             }
         }
@@ -305,7 +308,7 @@ namespace YOLOTools.YOLO.Display
             {
                 Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
                 label.text = "Loading...";
-                UpdateMovieLabel(label, obj.MovieID, obj.TrackID, obj.MovieConfidence);
+                UpdateMovieLabel(label, obj.MovieID, model, obj, obj.TrackID, obj.MovieConfidence);
             }
             else
             {
@@ -320,12 +323,49 @@ namespace YOLOTools.YOLO.Display
             }
         }
 
-        private async void UpdateMovieLabel(TextMeshPro label, string movieID, int id = -2, float confidence = 0f)
+        private async void UpdateMovieLabel(TextMeshPro label, string movieID, GameObject model, DetectedObject obj, int id = -2, float confidence = 0f)
         {
-            var movieName = await TMDb.GetMovieNameFromID(movieID);
+            var tmdbMovieInfo = await TMDb.GetMovieInfo(movieID);
+            var omdbMovieInfo = await OMDb.GetOMDbInfo(tmdbMovieInfo.imdb_id);
+            var movieName = tmdbMovieInfo.original_title;
+
             if (label != null && movieName != null)
             {
+                string rottenTomatoes;
+                int rottenTomatoesInt;
+
+                try
+                {
+                    rottenTomatoes = omdbMovieInfo.Ratings[1].Value;
+                    rottenTomatoesInt = int.Parse(rottenTomatoes.Replace("%",""));
+                    Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - RottenTomatoes score for {movieName}: {rottenTomatoesInt}");
+                } catch (Exception e)
+                {
+                    rottenTomatoes = "N/A";
+                    rottenTomatoesInt = 100;
+                    Debug.LogError($"ObjectDisplayManager::UpdateMovieLabel - {e}");
+                }
+
+                if (rottenTomatoesInt < rottenTomatoesThreshold)
+                {      
+                    if (string.IsNullOrEmpty(obj.Crop)) return;
+
+                    if (obj.CurrentTexture != null)
+                    {
+                        Destroy(obj.CurrentTexture);
+                    }
+
+                    byte[] imageBytes = Convert.FromBase64String(obj.Crop);
+                    obj.CurrentTexture = new Texture2D(32,64);
+                    if (obj.CurrentTexture.LoadImage(imageBytes))
+                    {
+                        var posterObject = model.gameObject.transform.Find("posterObject");
+                        posterObject.gameObject.GetComponent<Renderer>().material.SetTexture("_BaseMap", obj.CurrentTexture);
+                    }
+                }
+
                 label.text = $"TrackID: {id.ToString()}\n{movieName} - {confidence.ToString("0.00")}";
+
             } else if (movieName == null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Couldn't find ID {movieID}");

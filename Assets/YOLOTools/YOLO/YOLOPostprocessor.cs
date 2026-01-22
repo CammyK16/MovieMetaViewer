@@ -35,7 +35,7 @@ namespace YOLOTools.YOLO
                 var className = classes.GetValueOrDefault(cocoClass, null);
                 
                 objects.Add(new DetectedObject(centerX, centerY, width, height, cocoClass, className,
-                    confidence, "n/a", 0f, -1));
+                    null, confidence, "n/a", 0f, -1));
             }
 
             objects.Sort((x, y) => y.Confidence.CompareTo(x.Confidence));
@@ -58,10 +58,11 @@ namespace YOLOTools.YOLO
                 var movieId = obj.movie_id.prediction;
                 var movieIdConf = obj.movie_id.confidence;
                 var trackId = obj.track_id;
+                var crop = obj.crop;
 
                 Debug.Log($"YOLOPostProcessor::RemoteYOLOPostprocess - Movie ID: {movieId}, Confidence: {movieIdConf}");
 
-                results.Add(new DetectedObject(cx, cy, width, height, obj.class_id, obj.name, obj.confidence, movieId, movieIdConf, trackId));
+                results.Add(new DetectedObject(cx, cy, width, height, obj.class_id, obj.name, crop, obj.confidence, movieId, movieIdConf, trackId));
             }
 
             return results;
