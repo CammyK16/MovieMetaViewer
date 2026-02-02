@@ -585,15 +585,19 @@ namespace YOLOTools.YOLO.Display
         {
             FeedDimensions feedDimensions = _videoFeedManager.GetFeedDimensions();
 
-            var xOffset = (_camera.scaledPixelWidth - feedDimensions.Width) / 2f;
-            var yOffset = (_camera.scaledPixelHeight - feedDimensions.Height) / 2f;
+            float normalizedX = (coordinates.x / feedDimensions.Width) - 0.5f;
+            float normalizedY = (coordinates.y / feedDimensions.Height) - 0.5f;
 
-            var newX = coordinates.x + xOffset;
-            var newY = (feedDimensions.Height - coordinates.y) + yOffset;
+            normalizedX *= 0.9f;
+            normalizedY *= 0.85f;
 
-            // 200 pixel offset when using the Camera.MonoOrStereoscopicEye.Mono flag.
-            return new Vector2(newX, newY-200f);
+            float screenCenterX = _camera.scaledPixelWidth / 2f;
+            float screenCenterY = _camera.scaledPixelHeight / 2f;
 
+            var newX = screenCenterX + (normalizedX * feedDimensions.Width) - 50f;
+            var newY = screenCenterY - (normalizedY * feedDimensions.Height) - 190f;
+
+            return new Vector2(newX, newY);
         }
 
         private void OnSceneLoad()
