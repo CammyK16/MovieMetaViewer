@@ -13,6 +13,7 @@ using TMPro;
 using TMDbTools;
 using Oculus.Interaction;
 using UnityEngine.UI;
+using System.Threading.Tasks;
 
 namespace YOLOTools.YOLO.Display
 {
@@ -48,6 +49,9 @@ namespace YOLOTools.YOLO.Display
         private const float ScaleDampener = 0f;
 
         [SerializeField] private int rottenTomatoesThreshold = 0;
+        private bool _blockingMode = true;
+        private int _lastThreshold = 0;
+        private bool _lastBlockingMode = true;
 
         #endregion
 
@@ -55,6 +59,8 @@ namespace YOLOTools.YOLO.Display
 
         [Tooltip("The VideoFeedManager used to capture input frames.")]
         [MustBeAssigned][SerializeField] private VideoFeedManager _videoFeedManager;
+
+        [SerializeField] public Canvas _settingsCanvas;
 
         private Camera _camera;
 
@@ -91,6 +97,11 @@ namespace YOLOTools.YOLO.Display
 
             _camera = referenceCamera;
 
+            UpdateSettingsFromUI();
+            bool settingsChanged = _lastThreshold != rottenTomatoesThreshold || _lastBlockingMode != _blockingMode;
+            _lastThreshold = rottenTomatoesThreshold;
+            _lastBlockingMode = _blockingMode;
+
             Dictionary<int, int> objectCounts = new();
             HashSet<int> activeThisFrame = new HashSet<int>();
 
@@ -125,7 +136,7 @@ namespace YOLOTools.YOLO.Display
                 if (modelList.TryGetValue(obj.TrackID, out var existingModel))
                 {
                     // Already got object for this movie, move it
-                    UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, existingModel, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
+                    UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, existingModel, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f, settingsChanged);
                 }
                 else
                 {
@@ -136,17 +147,22 @@ namespace YOLOTools.YOLO.Display
 
                     var model = Instantiate(_cocoModels[obj.CocoName]);
                     modelList.Add(obj.TrackID, model);
-                    UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f);
+                    UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f, false);
                     ModelCount++;
 
                     // Ray Interaction
-                    var currentDetectedObject = obj;
                     var interactable = model.GetComponentInChildren<RayInteractable>();
 
                     if (interactable != null)
                     {
-                        interactable.WhenSelectingInteractorViewAdded += (interactor) => OnModelSelected(model, obj.MovieID);
-                    } else
+                        interactable.WhenSelectingInteractorViewAdded += _ =>
+                        {
+                            var state = model.GetComponent<MovieDisplayState>();
+                            var currentMovieID = state != null ? state.CurrentMovieID : null;
+                            if (!string.IsNullOrEmpty(currentMovieID)) OnModelSelected(model, currentMovieID);
+                        };
+                    }
+                    else
                     {
                         Debug.LogWarning("ObjectDisplayManager::DisplayModels - No RayInteractable found!");
                     }
@@ -159,13 +175,14 @@ namespace YOLOTools.YOLO.Display
                         SetUiVisible(model, false);
 
                         Button[] buttons = modelCanvas.GetComponentsInChildren<Button>();
-                        Button restoreButton = buttons.FirstOrDefault(b=> b.name == "RestoreButton");
+                        Button restoreButton = buttons.FirstOrDefault(b => b.name == "RestoreButton");
 
                         if (restoreButton != null)
                         {
                             Debug.Log("ObjectDisplayManager::DisplayModels - RestoreButton found!");
                             restoreButton.onClick.AddListener(ExitFocusMode);
-                        } else
+                        }
+                        else
                         {
                             Debug.Log("ObjectDisplayManager::DisplayModels - No RestoreButton found!");
                         }
@@ -177,7 +194,7 @@ namespace YOLOTools.YOLO.Display
             {
                 var entryDict = entry.Value;
                 var toRemove = entryDict.Where(kvp => !activeThisFrame.Contains(kvp.Key)).Select(kvp => kvp.Key).ToList();
-         
+
                 foreach (var idToRemove in toRemove)
                 {
                     Destroy(entryDict[idToRemove]);
@@ -211,12 +228,12 @@ namespace YOLOTools.YOLO.Display
             if (selectedModel != null)
             {
                 selectedModel.SetActive(true);
-                var canvas = selectedModel.GetComponentInChildren<Canvas>(true); 
-                if (canvas) 
+                var canvas = selectedModel.GetComponentInChildren<Canvas>(true);
+                if (canvas)
                 {
                     var TMProMeshes = canvas.GetComponentsInChildren<TMP_Text>();
-                    TMP_Text titleText = TMProMeshes.FirstOrDefault(t=> t.name == "UITitle");
-                    TMP_Text detailsText = TMProMeshes.FirstOrDefault(t=> t.name == "UIDetails");
+                    TMP_Text titleText = TMProMeshes.FirstOrDefault(t => t.name == "UITitle");
+                    TMP_Text detailsText = TMProMeshes.FirstOrDefault(t => t.name == "UIDetails");
                     UpdateMovieDetails(titleText, detailsText, movieID);
                     SetUiVisible(selectedModel, true);
                     var uiRoot = GetUiRoot(canvas);
@@ -243,6 +260,21 @@ namespace YOLOTools.YOLO.Display
                 }
 
                 isFocusMode = false;
+            }
+        }
+
+        private void UpdateSettingsFromUI()
+        {
+            var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "RottenTomatoesThresholdSlider");
+            if (slider)
+            {
+                rottenTomatoesThreshold = (int)slider.value;
+            }
+
+            var toggle = _settingsCanvas.GetComponentInChildren<Toggle>();
+            if (toggle)
+            {
+                _blockingMode = toggle.isOn;
             }
         }
 
@@ -295,7 +327,100 @@ namespace YOLOTools.YOLO.Display
             model.transform.localScale = Vector3.Scale(model.transform.localScale, scaleVector);
         }
 
-        private void UpdateModel(DetectedObject obj, int id, Vector3 newPosition, Quaternion newRotation, GameObject model, bool useRaycastNormal)
+        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore)
+        {
+            var state = model.GetComponent<MovieDisplayState>();
+            string crop = obj?.Crop;
+
+            var posterObject = model.transform.Find("posterObject");
+            var posterBorder = model.transform.Find("posterBorder");
+
+            if (rottenTomatoesScore < rottenTomatoesThreshold)
+            {
+                if (string.IsNullOrEmpty(crop)) return;
+
+                Texture2D texture = null;
+                if (obj.CurrentTexture != null)
+                {
+                    texture = obj.CurrentTexture;
+                }
+                else
+                {
+                    byte[] imageBytes = Convert.FromBase64String(crop);
+                    texture = new Texture2D(32, 64);
+                    if (!texture.LoadImage(imageBytes))
+                    {
+                        Destroy(texture);
+                        return;
+                    }
+
+                    if (obj != null)
+                    {
+                        if (obj.CurrentTexture != null)
+                        {
+                            Destroy(obj.CurrentTexture);
+                        }
+                        obj.CurrentTexture = texture;
+                    }
+                }
+
+                if (posterObject != null)
+                {
+                    posterObject.gameObject.SetActive(true);
+                    var posterObjectMaterial = posterObject.gameObject.GetComponent<Renderer>().material;
+
+                    if (_blockingMode)
+                    {
+                        posterObjectMaterial.SetColor("_BaseColor", Color.white);
+                        posterObjectMaterial.SetTexture("_BaseMap", texture);
+                        posterObjectMaterial.SetTexture("_EmissionMap", texture);
+                    }
+                    else
+                    {
+                        posterObjectMaterial.SetColor("_BaseColor", Color.black);
+                        posterObjectMaterial.SetTexture("_BaseMap", null);
+                        posterObjectMaterial.SetTexture("_EmissionMap", null);
+                    }
+                }
+
+                if (posterBorder != null)
+                {
+                    posterBorder.gameObject.SetActive(true);
+                    var posterBorderMaterial = posterBorder.gameObject.GetComponent<Renderer>().material;
+
+                    if (_blockingMode)
+                    {
+                        posterBorderMaterial.SetColor("_BaseColor", Color.white);
+                        posterBorderMaterial.SetTexture("_BaseMap", texture);
+                        posterBorderMaterial.SetTexture("_EmissionMap", texture);
+                    }
+                    else
+                    {
+                        posterBorderMaterial.SetColor("_BaseColor", Color.black);
+                        posterBorderMaterial.SetTexture("_BaseMap", null);
+                        posterBorderMaterial.SetTexture("_EmissionMap", null);
+                    }
+                }
+            }
+            else
+            {
+                if (posterObject != null)
+                {
+                    posterObject.gameObject.SetActive(false);
+                }
+                
+                if (posterBorder != null) 
+                {
+                    var posterBorderMaterial = posterBorder.gameObject.GetComponent<Renderer>().material;
+
+                    posterBorderMaterial.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.5f));
+                    posterBorderMaterial.SetTexture("_BaseMap", null);
+                    posterBorderMaterial.SetTexture("_EmissionMap", null);
+                }
+            }
+        }
+
+        private void UpdateModel(DetectedObject obj, int id, Vector3 newPosition, Quaternion newRotation, GameObject model, bool useRaycastNormal, bool forceUpdate = false)
         {
             model.transform.SetPositionAndRotation(newPosition, newRotation);
 
@@ -306,9 +431,33 @@ namespace YOLOTools.YOLO.Display
             TextMeshPro label = model.GetComponentInChildren<TextMeshPro>();
             if (label != null)
             {
-                Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
-                label.text = "Loading...";
-                UpdateMovieLabel(label, obj.MovieID, model, obj, obj.TrackID, obj.MovieConfidence);
+                var state = model.GetComponent<MovieDisplayState>() ?? model.AddComponent<MovieDisplayState>();
+
+                if (state.CurrentMovieID != obj.MovieID)
+                {
+                    var posterObject = model.transform.Find("posterObject");
+                    if (posterObject != null)
+                    {
+                        posterObject.gameObject.SetActive(false);
+                    }
+                    state.CurrentMovieID = obj.MovieID;
+                    state.RequestVersion++;
+                    state.CachedRottenTomatoesScore = -1;
+
+                    Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
+
+                    label.text = "Loading...";
+
+                    string movieId = obj.MovieID;
+                    string crop = obj.Crop;
+                    int trackId = obj.TrackID;
+                    float conf = obj.MovieConfidence;
+                    _ = UpdateMovieLabel(label, movieId, model, obj, crop, state.RequestVersion, state, trackId, conf);
+                }
+                else if (forceUpdate && state.CachedRottenTomatoesScore >= 0) 
+                {
+                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore);
+                }
             }
             else
             {
@@ -323,50 +472,31 @@ namespace YOLOTools.YOLO.Display
             }
         }
 
-        private async void UpdateMovieLabel(TextMeshPro label, string movieID, GameObject model, DetectedObject obj, int id = -2, float confidence = 0f)
+        private async Task UpdateMovieLabel(TextMeshPro label, string movieID, GameObject model, DetectedObject obj, string crop, int requestVersion, MovieDisplayState state, int id = -2, float confidence = 0f)
         {
             var tmdbMovieInfo = await TMDb.GetMovieInfo(movieID);
             var omdbMovieInfo = await OMDb.GetOMDbInfo(tmdbMovieInfo.imdb_id);
             var movieName = tmdbMovieInfo.original_title;
 
+            if (requestVersion != state.RequestVersion) return;
+
             if (label != null && movieName != null)
             {
-                string rottenTomatoes;
-                int rottenTomatoesInt;
-
-                try
+                int rottenTomatoesInt = 100;
+                var rt = omdbMovieInfo?.Ratings?.FirstOrDefault(r => r.Source == "Rotten Tomatoes")?.Value;
+                if (!string.IsNullOrEmpty(rt))
                 {
-                    rottenTomatoes = omdbMovieInfo.Ratings[1].Value;
-                    rottenTomatoesInt = int.Parse(rottenTomatoes.Replace("%",""));
-                    Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - RottenTomatoes score for {movieName}: {rottenTomatoesInt}");
-                } catch (Exception e)
-                {
-                    rottenTomatoes = "N/A";
-                    rottenTomatoesInt = 100;
-                    Debug.LogError($"ObjectDisplayManager::UpdateMovieLabel - {e}");
+                    int.TryParse(rt.Replace("%", ""), out rottenTomatoesInt);
                 }
 
-                if (rottenTomatoesInt < rottenTomatoesThreshold)
-                {      
-                    if (string.IsNullOrEmpty(obj.Crop)) return;
+                state.CachedRottenTomatoesScore = rottenTomatoesInt;
 
-                    if (obj.CurrentTexture != null)
-                    {
-                        Destroy(obj.CurrentTexture);
-                    }
-
-                    byte[] imageBytes = Convert.FromBase64String(obj.Crop);
-                    obj.CurrentTexture = new Texture2D(32,64);
-                    if (obj.CurrentTexture.LoadImage(imageBytes))
-                    {
-                        var posterObject = model.gameObject.transform.Find("posterObject");
-                        posterObject.gameObject.GetComponent<Renderer>().material.SetTexture("_BaseMap", obj.CurrentTexture);
-                    }
-                }
+                UpdatePosterVisuals(model, obj, rottenTomatoesInt);
 
                 label.text = $"TrackID: {id.ToString()}\n{movieName} - {confidence.ToString("0.00")}";
 
-            } else if (movieName == null)
+            }
+            else if (movieName == null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Couldn't find ID {movieID}");
                 label.text = "Not Found";
@@ -388,13 +518,15 @@ namespace YOLOTools.YOLO.Display
                 try
                 {
                     rottenTomatoes = omdbMovieInfo.Ratings[1].Value;
-                } catch
+                }
+                catch
                 {
                     rottenTomatoes = "N/A";
                 }
 
                 details.text = $"Rating: {tmdbMovieInfo.vote_average}\nRotten Tomatoes: {rottenTomatoes}\tIMDb: {omdbMovieInfo.imdbRating}\tMetacritic: {omdbMovieInfo.Metascore}\nGenres: {genres}\nProduction Companies:\n • {productionCompanyNames}\nProduction Countries: {productionCountries}\nBox Office: {omdbMovieInfo.BoxOffice}";
-            } else if (tmdbMovieInfo == null)
+            }
+            else if (tmdbMovieInfo == null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieDetails - Couldn't find ID {movieID}");
                 title.text = "Not Found";
@@ -588,13 +720,13 @@ namespace YOLOTools.YOLO.Display
             float normalizedX = (coordinates.x / feedDimensions.Width) - 0.5f;
             float normalizedY = (coordinates.y / feedDimensions.Height) - 0.5f;
 
-            normalizedX *= 0.9f;
-            normalizedY *= 0.85f;
+            normalizedX *= 0.92f;
+            normalizedY *= 0.9f;
 
             float screenCenterX = _camera.scaledPixelWidth / 2f;
             float screenCenterY = _camera.scaledPixelHeight / 2f;
 
-            var newX = screenCenterX + (normalizedX * feedDimensions.Width) - 50f;
+            var newX = screenCenterX + (normalizedX * feedDimensions.Width) - 55f;
             var newY = screenCenterY - (normalizedY * feedDimensions.Height) - 190f;
 
             return new Vector2(newX, newY);
