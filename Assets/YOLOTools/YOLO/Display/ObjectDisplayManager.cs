@@ -720,8 +720,10 @@ namespace YOLOTools.YOLO.Display
             float normalizedX = (coordinates.x / feedDimensions.Width) - 0.5f;
             float normalizedY = (coordinates.y / feedDimensions.Height) - 0.5f;
 
-            normalizedX *= 0.92f;
-            normalizedY *= 0.9f;
+            var XSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "XScaleSlider");
+            var YSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "YScaleSlider");
+            normalizedX *= XSlider.value / 100f;
+            normalizedY *= YSlider.value / 100f;
 
             float screenCenterX = _camera.scaledPixelWidth / 2f;
             float screenCenterY = _camera.scaledPixelHeight / 2f;

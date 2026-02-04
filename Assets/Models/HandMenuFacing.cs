@@ -2,16 +2,13 @@ using UnityEngine;
 
 public class HandMenuFacing : MonoBehaviour
 {
-    [Tooltip("Transform that defines the menu's 'front' (usually the canvas transform).")]
     public Transform menuFront;
 
-    [Tooltip("Camera (AR camera). If null, uses Camera.main.")]
     public Camera cam;
 
     [Range(-1f, 1f)]
     public float showDotThreshold = -0.15f;
 
-    [Tooltip("Optional: disable the whole canvas GameObject when hidden.")]
     public GameObject menuRoot;
 
     void Reset()
