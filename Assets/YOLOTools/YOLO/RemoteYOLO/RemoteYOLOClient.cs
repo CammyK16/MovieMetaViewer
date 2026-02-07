@@ -104,7 +104,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
         /// <param name="useCustomModel">Sets whether the currently uploaded custom model should be used. Does not upload any model, therefore one must already exist on the server for this option to work correctly.</param>
         /// <returns>An <see cref="Awaitable"/>&lt;<see cref="RemoteYOLOAnalyseResponse"/>&gt; confroming to the response schema.</returns>
         /// <exception cref="HttpRequestException">Throws an HttpRequestException on failure status code. The message field contains the error message from the server, if one exists.</exception>
-        public async Awaitable<RemoteYOLOAnalyseResponse> AnalyseAsync(byte[] imageData, YOLOModel yoloModel = YOLOModel.YOLO11N, YOLOFormat yoloFormat = YOLOFormat.NCNN, bool useCustomModel = false)
+        public async Awaitable<RemoteYOLOAnalyseResponse> AnalyseAsync(byte[] imageData, YOLOModel yoloModel = YOLOModel.YOLO11N, YOLOFormat yoloFormat = YOLOFormat.NCNN, bool useCustomModel = false, String imageType = "blur")
         {
             using HttpRequestMessage request = new(HttpMethod.Post, $"http://{BaseAddress}{_analyseEndpoint}");
             
@@ -115,6 +115,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
                 useCustomModel ? new StringContent("custom") : new StringContent(yoloModel.ToString().ToLower()),
                 "model");
             content.Add(new ByteArrayContent(imageData), "image", "image.jpg");
+            content.Add(new StringContent(imageType.ToString()), "image_type");
             request.Content = content;
             
             using HttpResponseMessage response = await _client.SendAsync(request);
@@ -150,7 +151,7 @@ namespace YOLOTools.YOLO.RemoteYOLO
             content.Add(new StringContent(yoloFormat.ToString().ToLower()), "format");
             content.Add(
                 useCustomModel ? new StringContent("custom") : new StringContent(yoloModel.ToString().ToLower()),
-                "model");            
+                "model");
             content.Add(new ByteArrayContent(imageData), "image", "image.jpg");
             request.Content = content;
             

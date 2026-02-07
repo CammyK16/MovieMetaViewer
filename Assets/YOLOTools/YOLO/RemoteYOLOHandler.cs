@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using MyBox;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Android;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.UI;
 using YOLOTools.Utilities;
 using YOLOTools.YOLO.Display;
 using YOLOTools.YOLO.RemoteYOLO;
@@ -15,21 +19,21 @@ namespace YOLOTools.YOLO
     {
 
         #region Inputs
-        
+
         [Tooltip("The network address (including port number if not using standard HTTP port 80) of the device running the remoteyolo processing server.")]
-        [MustBeAssigned] [SerializeField]
+        [MustBeAssigned][SerializeField]
         public string m_remoteYOLOProcessorAddress;
         [SerializeField] private YOLOFormat m_YOLOFormat;
-        [ConditionalField(nameof(m_useCustomModel), true)] [SerializeField] public YOLOModel m_YOLOModel;
+        [ConditionalField(nameof(m_useCustomModel), true)][SerializeField] public YOLOModel m_YOLOModel;
         [Tooltip("A custom YOLO model in .pt format. This field takes a file with a .bytes extension. Importing a .pt file into the project will automatically convert it to the correct format.")]
-        [ConditionalField(nameof(m_useCustomModel))] [SerializeField] private TextAsset m_customModel;
+        [ConditionalField(nameof(m_useCustomModel))][SerializeField] private TextAsset m_customModel;
         [SerializeField] public bool m_useCustomModel;
         [Space(30f)]
         [Tooltip("The threshold below which a detection will be ignored.")]
-        [SerializeField] [Range(0f,1f)] public float m_confidenceThreshold = 0.5f;
+        [SerializeField][Range(0f, 1f)] public float m_confidenceThreshold = 0.5f;
         [Space(30f)]
         [Tooltip("The ObjectDisplayManager that will handle the spawning of digital double models.")]
-        [SerializeField] [DisplayInspector] private ObjectDisplayManager m_objectDisplayManager;
+        [SerializeField][DisplayInspector] private ObjectDisplayManager m_objectDisplayManager;
         [Tooltip("The VideoFeedManager to analyse frames from.")]
         [MustBeAssigned] public VideoFeedManager YOLOCamera;
         [MustBeAssigned]
@@ -38,16 +42,19 @@ namespace YOLOTools.YOLO
         [Space(30f)]
         [SerializeField] private OVRInput.RawButton m_stopInferenceButton = OVRInput.RawButton.A;
         private bool shouldRun = true;
+        [SerializeField] private Canvas m_settingsCanvas;
 
         #endregion
-        
+
         #region Internal Variables
-        
+
         private Texture2D m_inputTexture;
         private bool m_inferencePending = false;
         private bool m_inferenceDone = false;
         private RemoteYOLOAnalyseResponse m_remoteYOLOResponse;
         private Camera m_analysisCamera;
+
+        private List<string> imageModes = new List<string>() {"blur", "desaturated", "black"};
 
         private byte[] m_imageData;
         
@@ -155,6 +162,7 @@ namespace YOLOTools.YOLO
 
         private async Awaitable AnalyseImage(Texture2D texture)
         {
+            Debug.Log("RemoteYOLOHandler::AnalyseImage - Running...");
             var imageConversionThreadParams = new ImageConversionThreadParams
             {
                 imageBuffer = texture.GetRawTextureData(),
@@ -166,9 +174,22 @@ namespace YOLOTools.YOLO
             
             await Task.Run(() => EncodeImageJPG(imageConversionThreadParams));
 
+            var imageModeDropdown = m_settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "ImageModeDropdown");
+            string imageMode;
+            if (imageModeDropdown != null)
+            {
+                Debug.Log("RemoteYOLOHandler::AnalyseImage - Dropdown found!");
+                var imageModeIndex = imageModeDropdown.value;
+                imageMode = imageModes[imageModeIndex];
+            } else
+            {
+                Debug.LogError("RemoteYOLOHandler::AnalyseImage - Dropdown not found!");
+                imageMode = "blur";
+            }
+
             try
             {
-                m_remoteYOLOResponse = await m_remoteYOLOClient.AnalyseAsync(m_imageData, m_YOLOModel, m_YOLOFormat, m_useCustomModel);
+                m_remoteYOLOResponse = await m_remoteYOLOClient.AnalyseAsync(m_imageData, m_YOLOModel, m_YOLOFormat, m_useCustomModel, imageMode);
                 m_inferenceDone = true;
                 m_inferencePending = false;
             }

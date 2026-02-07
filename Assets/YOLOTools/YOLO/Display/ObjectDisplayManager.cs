@@ -49,9 +49,9 @@ namespace YOLOTools.YOLO.Display
         private const float ScaleDampener = 0f;
 
         [SerializeField] private int rottenTomatoesThreshold = 0;
-        private bool _blockingMode = true;
+        private string _blockingMode = "blur";
         private int _lastThreshold = 0;
-        private bool _lastBlockingMode = true;
+        private string _lastBlockingMode = "blur";
 
         #endregion
 
@@ -271,10 +271,12 @@ namespace YOLOTools.YOLO.Display
                 rottenTomatoesThreshold = (int)slider.value;
             }
 
-            var toggle = _settingsCanvas.GetComponentInChildren<Toggle>();
-            if (toggle)
+            List<string> imageModes = new List<string>() { "blur", "desaturated", "black" };
+            var imageModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "ImageModeDropdown");
+            if (imageModeDropdown)
             {
-                _blockingMode = toggle.isOn;
+                var blockingModeIndex = imageModeDropdown.value;
+                _blockingMode = imageModes[blockingModeIndex];
             }
         }
 
@@ -329,7 +331,6 @@ namespace YOLOTools.YOLO.Display
 
         private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore)
         {
-            var state = model.GetComponent<MovieDisplayState>();
             string crop = obj?.Crop;
 
             var posterObject = model.transform.Find("posterObject");
@@ -337,30 +338,32 @@ namespace YOLOTools.YOLO.Display
 
             if (rottenTomatoesScore < rottenTomatoesThreshold)
             {
-                if (string.IsNullOrEmpty(crop)) return;
-
                 Texture2D texture = null;
-                if (obj.CurrentTexture != null)
-                {
-                    texture = obj.CurrentTexture;
-                }
-                else
-                {
-                    byte[] imageBytes = Convert.FromBase64String(crop);
-                    texture = new Texture2D(32, 64);
-                    if (!texture.LoadImage(imageBytes))
-                    {
-                        Destroy(texture);
-                        return;
-                    }
 
-                    if (obj != null)
+                if (!string.IsNullOrEmpty(crop))
+                {    
+                    if (obj.CurrentTexture != null)
                     {
-                        if (obj.CurrentTexture != null)
+                        texture = obj.CurrentTexture;
+                    }
+                    else
+                    {
+                        byte[] imageBytes = Convert.FromBase64String(crop);
+                        texture = new Texture2D(32, 64);
+                        if (!texture.LoadImage(imageBytes))
                         {
-                            Destroy(obj.CurrentTexture);
+                            Destroy(texture);
+                            return;
                         }
-                        obj.CurrentTexture = texture;
+
+                        if (obj != null)
+                        {
+                            if (obj.CurrentTexture != null)
+                            {
+                                Destroy(obj.CurrentTexture);
+                            }
+                            obj.CurrentTexture = texture;
+                        }
                     }
                 }
 
@@ -369,7 +372,7 @@ namespace YOLOTools.YOLO.Display
                     posterObject.gameObject.SetActive(true);
                     var posterObjectMaterial = posterObject.gameObject.GetComponent<Renderer>().material;
 
-                    if (_blockingMode)
+                    if (_blockingMode == "blur" || _blockingMode == "desaturated")
                     {
                         posterObjectMaterial.SetColor("_BaseColor", Color.white);
                         posterObjectMaterial.SetTexture("_BaseMap", texture);
@@ -388,7 +391,7 @@ namespace YOLOTools.YOLO.Display
                     posterBorder.gameObject.SetActive(true);
                     var posterBorderMaterial = posterBorder.gameObject.GetComponent<Renderer>().material;
 
-                    if (_blockingMode)
+                    if (_blockingMode == "blur" || _blockingMode == "desaturated")
                     {
                         posterBorderMaterial.SetColor("_BaseColor", Color.white);
                         posterBorderMaterial.SetTexture("_BaseMap", texture);

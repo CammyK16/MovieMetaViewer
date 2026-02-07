@@ -82,7 +82,7 @@ namespace TMDbTools
     [Serializable]
     public class ProductionCountry
     {
-        public string iso_3116_1;
+        public string iso_3166_1;
         public string name;
     }
     

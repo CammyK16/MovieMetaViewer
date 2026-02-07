@@ -19,10 +19,8 @@ public class HandMenuFacing : MonoBehaviour
 
     void Update()
     {
-        Debug.Log("HandMenuFacingGate::LateUpdate - Running");
         if (!cam)
         {
-            Debug.LogError("HandMenuFacingGate::LateUpdate - Camera Not Found!");
             cam = Camera.main;
         }
         if (!cam || !menuFront || !menuRoot) return;
@@ -34,7 +32,6 @@ public class HandMenuFacing : MonoBehaviour
 
         bool shouldShow = showDotThreshold > d;
 
-        Debug.Log($"HandMenuFacingGate::LateUpdate - d: {d}  --  shouldShow: {shouldShow}");
         menuRoot.SetActive(shouldShow);
     }
 }
