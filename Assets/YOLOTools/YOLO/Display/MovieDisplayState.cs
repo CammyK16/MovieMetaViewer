@@ -7,5 +7,7 @@ namespace YOLOTools.YOLO.Display
         public string CurrentMovieID;
         public int RequestVersion;
         public int CachedRottenTomatoesScore;
+        public int CachedIMDbScore;
+        public int CachedMetacriticScore;
     }
 }

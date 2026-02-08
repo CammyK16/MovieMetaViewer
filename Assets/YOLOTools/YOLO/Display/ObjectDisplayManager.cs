@@ -48,9 +48,13 @@ namespace YOLOTools.YOLO.Display
 
         private const float ScaleDampener = 0f;
 
-        [SerializeField] private int rottenTomatoesThreshold = 0;
+        [SerializeField] private int _rottenTomatoesThreshold = 0;
+        [SerializeField] private int _imdbThreshold = 0;
+        [SerializeField] private int _metacriticThreshold = 0;
         private string _blockingMode = "blur";
-        private int _lastThreshold = 0;
+        private int _lastRTThreshold = 0;
+        private int _lastIMDbThreshold = 0;
+        private int _lastMCThreshold = 0;
         private string _lastBlockingMode = "blur";
 
         #endregion
@@ -61,6 +65,13 @@ namespace YOLOTools.YOLO.Display
         [MustBeAssigned][SerializeField] private VideoFeedManager _videoFeedManager;
 
         [SerializeField] public Canvas _settingsCanvas;
+        private Toggle _rottenTomatesEnabledToggle;
+        private Toggle _imdbEnabledToggle;
+        private Toggle _metacriticEnabledToggle;
+
+        private bool _rottenTomatoesEnabled;
+        private bool _imdbEnabled;
+        private bool _metacriticEnabled;
 
         private Camera _camera;
 
@@ -89,6 +100,10 @@ namespace YOLOTools.YOLO.Display
                 _environmentRaycastManager = gameObject.AddComponent<EnvironmentRaycastManager>();
             }
             Unity.XR.Oculus.Utils.SetupEnvironmentDepth(new Unity.XR.Oculus.Utils.EnvironmentDepthCreateParams());
+
+            _rottenTomatesEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "RottenTomatoesSliderEnabled");
+            _imdbEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "IMDbSliderEnabled");
+            _metacriticEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "MetacriticSliderEnabled");
         }
 
         public void DisplayModels(List<DetectedObject> objects, Camera referenceCamera)
@@ -98,9 +113,13 @@ namespace YOLOTools.YOLO.Display
             _camera = referenceCamera;
 
             UpdateSettingsFromUI();
-            bool settingsChanged = _lastThreshold != rottenTomatoesThreshold || _lastBlockingMode != _blockingMode;
-            _lastThreshold = rottenTomatoesThreshold;
+            bool settingsChanged = _lastRTThreshold != _rottenTomatoesThreshold || _lastBlockingMode != _blockingMode || _lastIMDbThreshold != _imdbThreshold || _lastMCThreshold != _metacriticThreshold;
+            Debug.Log($"ObjectDisplayManager::DisplayModels - _lastBlockingMode = {_lastBlockingMode}, _blockingMode = {_blockingMode}, settingsChanged = {settingsChanged}");
+            _lastRTThreshold = _rottenTomatoesThreshold;
+            _lastIMDbThreshold = _imdbThreshold;
+            _lastMCThreshold = _metacriticThreshold;
             _lastBlockingMode = _blockingMode;
+
 
             Dictionary<int, int> objectCounts = new();
             HashSet<int> activeThisFrame = new HashSet<int>();
@@ -265,19 +284,49 @@ namespace YOLOTools.YOLO.Display
 
         private void UpdateSettingsFromUI()
         {
-            var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "RottenTomatoesThresholdSlider");
-            if (slider)
-            {
-                rottenTomatoesThreshold = (int)slider.value;
-            }
+            _rottenTomatoesEnabled = _rottenTomatesEnabledToggle.isOn;
+            _imdbEnabled = _imdbEnabledToggle.isOn;
+            _metacriticEnabled = _metacriticEnabledToggle.isOn;
 
-            List<string> imageModes = new List<string>() { "blur", "desaturated", "black" };
-            var imageModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "ImageModeDropdown");
-            if (imageModeDropdown)
+            if (_rottenTomatoesEnabled)
             {
-                var blockingModeIndex = imageModeDropdown.value;
-                _blockingMode = imageModes[blockingModeIndex];
+                var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "RottenTomatoesThresholdSlider");
+                if (slider)
+                {
+                    _rottenTomatoesThreshold = (int)slider.value;
+                }
             }
+            else _rottenTomatoesThreshold = 0;
+            
+            if (_imdbEnabled)
+            {
+                var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "IMDbThresholdSlider");
+                if (slider)
+                {
+                    _imdbThreshold = (int)slider.value;
+                }
+            }
+            else _imdbThreshold = 0;
+
+            if (_metacriticEnabled)
+            {
+                var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "MetacriticThresholdSlider");
+                if (slider)
+                {
+                    _metacriticThreshold = (int)slider.value;
+                }
+            }
+            else _metacriticThreshold = 0;
+
+            List<string> blockingModes = new List<string>() { "blur", "desaturated", "black" };
+            var blockingModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
+            if (blockingModeDropdown)
+            {
+                Debug.Log("ObjectDisplayManager::UpdateSettingsFromUI - Found blocking mode dropdown!");
+                var blockingModeIndex = blockingModeDropdown.value;
+                _blockingMode = blockingModes[blockingModeIndex];
+                Debug.Log($"ObjectDisplayManager::UpdateSettingsFromUI - Blocking mode set to {_blockingMode}!");
+            } 
         }
 
         #region Model Methods
@@ -329,14 +378,14 @@ namespace YOLOTools.YOLO.Display
             model.transform.localScale = Vector3.Scale(model.transform.localScale, scaleVector);
         }
 
-        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore)
+        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore, int imdbScore, int metacriticScore)
         {
             string crop = obj?.Crop;
 
             var posterObject = model.transform.Find("posterObject");
             var posterBorder = model.transform.Find("posterBorder");
 
-            if (rottenTomatoesScore < rottenTomatoesThreshold)
+            if ((rottenTomatoesScore < _rottenTomatoesThreshold && _rottenTomatoesEnabled) || (imdbScore < _imdbThreshold && _imdbEnabled) || (metacriticScore < _metacriticThreshold && _metacriticEnabled))
             {
                 Texture2D texture = null;
 
@@ -435,7 +484,7 @@ namespace YOLOTools.YOLO.Display
             if (label != null)
             {
                 var state = model.GetComponent<MovieDisplayState>() ?? model.AddComponent<MovieDisplayState>();
-
+                Debug.Log($"ObjectDisplayManager::UpdateModel - forceUpdate = {forceUpdate}");
                 if (state.CurrentMovieID != obj.MovieID)
                 {
                     var posterObject = model.transform.Find("posterObject");
@@ -446,6 +495,8 @@ namespace YOLOTools.YOLO.Display
                     state.CurrentMovieID = obj.MovieID;
                     state.RequestVersion++;
                     state.CachedRottenTomatoesScore = -1;
+                    state.CachedIMDbScore = -1;
+                    state.CachedMetacriticScore = -1;
 
                     Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
 
@@ -457,9 +508,9 @@ namespace YOLOTools.YOLO.Display
                     float conf = obj.MovieConfidence;
                     _ = UpdateMovieLabel(label, movieId, model, obj, crop, state.RequestVersion, state, trackId, conf);
                 }
-                else if (forceUpdate && state.CachedRottenTomatoesScore >= 0) 
+                else 
                 {
-                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore);
+                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore, state.CachedIMDbScore, state.CachedMetacriticScore);
                 }
             }
             else
@@ -486,15 +537,34 @@ namespace YOLOTools.YOLO.Display
             if (label != null && movieName != null)
             {
                 int rottenTomatoesInt = 100;
+                int imdbInt = 100;
+                int metacriticInt = 100;
+
                 var rt = omdbMovieInfo?.Ratings?.FirstOrDefault(r => r.Source == "Rotten Tomatoes")?.Value;
                 if (!string.IsNullOrEmpty(rt))
                 {
                     int.TryParse(rt.Replace("%", ""), out rottenTomatoesInt);
                 }
 
-                state.CachedRottenTomatoesScore = rottenTomatoesInt;
+                var imdb = omdbMovieInfo?.Ratings?.FirstOrDefault(r => r.Source == "Internet Movie Database")?.Value;
+                if (!string.IsNullOrEmpty(imdb))
+                {
+                    float imdbFloat;
+                    float.TryParse(imdb.Substring(0, 3), out imdbFloat);
+                    imdbInt = (int)(imdbFloat * 10);
+                }
 
-                UpdatePosterVisuals(model, obj, rottenTomatoesInt);
+                var metacritic = omdbMovieInfo?.Ratings?.FirstOrDefault(r => r.Source == "Metacritic")?.Value;
+                if (!string.IsNullOrEmpty(metacritic))
+                {
+                    int.TryParse(metacritic.Replace("/100", ""), out metacriticInt);
+                }
+
+                state.CachedRottenTomatoesScore = rottenTomatoesInt;
+                state.CachedIMDbScore = imdbInt;
+                state.CachedMetacriticScore = metacriticInt;
+
+                UpdatePosterVisuals(model, obj, rottenTomatoesInt, imdbInt, metacriticInt);
 
                 label.text = $"TrackID: {id.ToString()}\n{movieName} - {confidence.ToString("0.00")}";
 

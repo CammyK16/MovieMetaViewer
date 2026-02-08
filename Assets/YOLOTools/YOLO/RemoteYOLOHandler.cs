@@ -54,7 +54,7 @@ namespace YOLOTools.YOLO
         private RemoteYOLOAnalyseResponse m_remoteYOLOResponse;
         private Camera m_analysisCamera;
 
-        private List<string> imageModes = new List<string>() {"blur", "desaturated", "black"};
+        private List<string> blockingModes = new List<string>() {"blur", "desaturated", "black"};
 
         private byte[] m_imageData;
         
@@ -174,22 +174,22 @@ namespace YOLOTools.YOLO
             
             await Task.Run(() => EncodeImageJPG(imageConversionThreadParams));
 
-            var imageModeDropdown = m_settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "ImageModeDropdown");
-            string imageMode;
-            if (imageModeDropdown != null)
+            var blockingModeDropdown = m_settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
+            string blockingMode;
+            if (blockingModeDropdown != null)
             {
                 Debug.Log("RemoteYOLOHandler::AnalyseImage - Dropdown found!");
-                var imageModeIndex = imageModeDropdown.value;
-                imageMode = imageModes[imageModeIndex];
+                var blockingModeIndex = blockingModeDropdown.value;
+                blockingMode = blockingModes[blockingModeIndex];
             } else
             {
                 Debug.LogError("RemoteYOLOHandler::AnalyseImage - Dropdown not found!");
-                imageMode = "blur";
+                blockingMode = "blur";
             }
 
             try
             {
-                m_remoteYOLOResponse = await m_remoteYOLOClient.AnalyseAsync(m_imageData, m_YOLOModel, m_YOLOFormat, m_useCustomModel, imageMode);
+                m_remoteYOLOResponse = await m_remoteYOLOClient.AnalyseAsync(m_imageData, m_YOLOModel, m_YOLOFormat, m_useCustomModel, blockingMode);
                 m_inferenceDone = true;
                 m_inferencePending = false;
             }
