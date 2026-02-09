@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMDbTools;
 
 namespace YOLOTools.YOLO.Display
 {
@@ -9,5 +10,6 @@ namespace YOLOTools.YOLO.Display
         public int CachedRottenTomatoesScore;
         public int CachedIMDbScore;
         public int CachedMetacriticScore;
+        public ProductionCountry[] CachedProductionCountries;
     }
 }

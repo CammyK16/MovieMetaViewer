@@ -14,6 +14,7 @@ using TMDbTools;
 using Oculus.Interaction;
 using UnityEngine.UI;
 using System.Threading.Tasks;
+using CustomScripts;
 
 namespace YOLOTools.YOLO.Display
 {
@@ -73,6 +74,9 @@ namespace YOLOTools.YOLO.Display
         private bool _imdbEnabled;
         private bool _metacriticEnabled;
 
+        private List<string> _selectedCountries;
+        private bool _countryExcludeShow; // 0 for exclude, 1 for show only
+
         private Camera _camera;
 
         #endregion
@@ -104,6 +108,8 @@ namespace YOLOTools.YOLO.Display
             _rottenTomatesEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "RottenTomatoesSliderEnabled");
             _imdbEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "IMDbSliderEnabled");
             _metacriticEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "MetacriticSliderEnabled");
+
+            _selectedCountries = new List<string>();
         }
 
         public void DisplayModels(List<DetectedObject> objects, Camera referenceCamera)
@@ -322,11 +328,22 @@ namespace YOLOTools.YOLO.Display
             var blockingModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
             if (blockingModeDropdown)
             {
-                Debug.Log("ObjectDisplayManager::UpdateSettingsFromUI - Found blocking mode dropdown!");
                 var blockingModeIndex = blockingModeDropdown.value;
                 _blockingMode = blockingModes[blockingModeIndex];
-                Debug.Log($"ObjectDisplayManager::UpdateSettingsFromUI - Blocking mode set to {_blockingMode}!");
-            } 
+            }
+
+            var countrySelectDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "CountryDropdown");
+            if (countrySelectDropdown)
+            {
+                var countryDropdownManager = countrySelectDropdown.GetComponentInChildren<CountryDropdownManager>();
+                _selectedCountries = countryDropdownManager.GetSelectedCountries();
+            }
+
+            var countryExcludeShowToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "ToggleExcludeShowSwitch");
+            if (countryExcludeShowToggle)
+            {
+                _countryExcludeShow = countryExcludeShowToggle.isOn;
+            }
         }
 
         #region Model Methods
@@ -378,14 +395,39 @@ namespace YOLOTools.YOLO.Display
             model.transform.localScale = Vector3.Scale(model.transform.localScale, scaleVector);
         }
 
-        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore, int imdbScore, int metacriticScore)
+        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore, int imdbScore, int metacriticScore, ProductionCountry[] productionCountries)
         {
             string crop = obj?.Crop;
 
             var posterObject = model.transform.Find("posterObject");
             var posterBorder = model.transform.Find("posterBorder");
 
-            if ((rottenTomatoesScore < _rottenTomatoesThreshold && _rottenTomatoesEnabled) || (imdbScore < _imdbThreshold && _imdbEnabled) || (metacriticScore < _metacriticThreshold && _metacriticEnabled))
+            bool belowRatingThreshold = (rottenTomatoesScore < _rottenTomatoesThreshold && _rottenTomatoesEnabled) || (imdbScore < _imdbThreshold && _imdbEnabled) || (metacriticScore < _metacriticThreshold && _metacriticEnabled);
+
+            bool hiddenCountry = false;
+            foreach (ProductionCountry productionCountry in productionCountries)
+            {
+                if (_countryExcludeShow)
+                {
+                    // _countryExcludeShow is 1, so we show only the selected countries
+                    hiddenCountry = true;
+                    if (_selectedCountries.Contains(productionCountry.iso_3166_1))
+                    {
+                        hiddenCountry = false;
+                        break;
+                    }
+                } else
+                {
+                    // _countryExcludeShow is 0, so we hide the selected countries
+                    if (_selectedCountries.Contains(productionCountry.iso_3166_1))
+                    {
+                        hiddenCountry = true;
+                        break;
+                    }
+                }
+            }
+
+            if (belowRatingThreshold || hiddenCountry)
             {
                 Texture2D texture = null;
 
@@ -465,7 +507,7 @@ namespace YOLOTools.YOLO.Display
                 {
                     var posterBorderMaterial = posterBorder.gameObject.GetComponent<Renderer>().material;
 
-                    posterBorderMaterial.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.5f));
+                    posterBorderMaterial.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.75f));
                     posterBorderMaterial.SetTexture("_BaseMap", null);
                     posterBorderMaterial.SetTexture("_EmissionMap", null);
                 }
@@ -510,7 +552,7 @@ namespace YOLOTools.YOLO.Display
                 }
                 else 
                 {
-                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore, state.CachedIMDbScore, state.CachedMetacriticScore);
+                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore, state.CachedIMDbScore, state.CachedMetacriticScore, state.CachedProductionCountries);
                 }
             }
             else
@@ -560,14 +602,15 @@ namespace YOLOTools.YOLO.Display
                     int.TryParse(metacritic.Replace("/100", ""), out metacriticInt);
                 }
 
+                var productionCountries = tmdbMovieInfo?.production_countries;
+
                 state.CachedRottenTomatoesScore = rottenTomatoesInt;
                 state.CachedIMDbScore = imdbInt;
                 state.CachedMetacriticScore = metacriticInt;
+                state.CachedProductionCountries = productionCountries;
 
-                UpdatePosterVisuals(model, obj, rottenTomatoesInt, imdbInt, metacriticInt);
-
+                UpdatePosterVisuals(model, obj, rottenTomatoesInt, imdbInt, metacriticInt, productionCountries);
                 label.text = $"TrackID: {id.ToString()}\n{movieName} - {confidence.ToString("0.00")}";
-
             }
             else if (movieName == null)
             {
