@@ -2013,7 +2013,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6244658300373328758, guid: c1fa15e93b3d0324ebb8093dc8db35b9, type: 3}
       propertyPath: m_Name
-      value: GenreToggleExcludeShowSwitch
+      value: GenreExcludeShowSwitch
       objectReference: {fileID: 0}
     - target: {fileID: 8075725011072244730, guid: c1fa15e93b3d0324ebb8093dc8db35b9, type: 3}
       propertyPath: m_Pivot.x
@@ -4292,6 +4292,9 @@ MonoBehaviour:
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
     - m_Text: Black
+      m_Image: {fileID: 0}
+      m_Color: {r: 1, g: 1, b: 1, a: 1}
+    - m_Text: Borders
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_OnValueChanged:
@@ -8383,6 +8386,7 @@ GameObject:
   - component: {fileID: 810074450}
   - component: {fileID: 810074449}
   - component: {fileID: 810074448}
+  - component: {fileID: 810074451}
   m_Layer: 3
   m_Name: GenreDropdown
   m_TagString: Untagged
@@ -8577,6 +8581,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 810074446}
   m_CullTransparentMesh: 1
+--- !u!114 &810074451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 810074446}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1da91a44bbd83b543b012395051137ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _dropdown: {fileID: 810074448}
 --- !u!1 &831771649
 GameObject:
   m_ObjectHideFlags: 0

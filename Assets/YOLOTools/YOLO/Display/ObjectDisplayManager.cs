@@ -77,6 +77,9 @@ namespace YOLOTools.YOLO.Display
         private List<string> _selectedCountries;
         private bool _countryExcludeShow; // 0 for exclude, 1 for show only
 
+        private List<string> _selectedGenres;
+        private bool _genreExcludeShow; // 0 for exclude, 1 for show only
+
         private Camera _camera;
 
         #endregion
@@ -335,7 +338,7 @@ namespace YOLOTools.YOLO.Display
             var countrySelectDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "CountryDropdown");
             if (countrySelectDropdown)
             {
-                var countryDropdownManager = countrySelectDropdown.GetComponentInChildren<CountryDropdownManager>();
+                var countryDropdownManager = countrySelectDropdown.GetComponent<CountryDropdownManager>();
                 _selectedCountries = countryDropdownManager.GetSelectedCountries();
             }
 
@@ -343,6 +346,19 @@ namespace YOLOTools.YOLO.Display
             if (countryExcludeShowToggle)
             {
                 _countryExcludeShow = countryExcludeShowToggle.isOn;
+            }
+
+            var genreSelectDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "GenreDropdown");
+            if (genreSelectDropdown)
+            {
+                var genreDropdownManager = genreSelectDropdown.GetComponent<GenreDropdownManager>();
+                _selectedGenres = genreDropdownManager.GetSelectedGenres();
+            }
+
+            var genreExcludeToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "GenreExcludeShowSwitch");
+            if (genreExcludeToggle)
+            {
+                _genreExcludeShow = genreExcludeToggle.isOn;
             }
         }
 
@@ -395,7 +411,7 @@ namespace YOLOTools.YOLO.Display
             model.transform.localScale = Vector3.Scale(model.transform.localScale, scaleVector);
         }
 
-        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore, int imdbScore, int metacriticScore, ProductionCountry[] productionCountries)
+        private void UpdatePosterVisuals(GameObject model, DetectedObject obj, int rottenTomatoesScore, int imdbScore, int metacriticScore, ProductionCountry[] productionCountries, Genre[] genres)
         {
             string crop = obj?.Crop;
 
@@ -416,7 +432,8 @@ namespace YOLOTools.YOLO.Display
                         hiddenCountry = false;
                         break;
                     }
-                } else
+                }
+                else
                 {
                     // _countryExcludeShow is 0, so we hide the selected countries
                     if (_selectedCountries.Contains(productionCountry.iso_3166_1))
@@ -427,7 +444,30 @@ namespace YOLOTools.YOLO.Display
                 }
             }
 
-            if (belowRatingThreshold || hiddenCountry)
+            bool hiddenGenre = false;
+            foreach (Genre genre in genres)
+            {
+                if (_genreExcludeShow)
+                {
+                    // _genreExcludeShow is 1, so we show only the selected countries
+                    hiddenGenre = true;
+                    if (_selectedGenres.Contains(genre.name))
+                    {
+                        hiddenGenre = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    // _genreExcludeShow is 0, so we hide the selected countries
+                    if (_selectedGenres.Contains(genre.name))
+                    {
+                        hiddenGenre = true;
+                    }
+                }
+            }
+
+            if (belowRatingThreshold || hiddenCountry || hiddenGenre)
             {
                 Texture2D texture = null;
 
@@ -552,7 +592,7 @@ namespace YOLOTools.YOLO.Display
                 }
                 else 
                 {
-                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore, state.CachedIMDbScore, state.CachedMetacriticScore, state.CachedProductionCountries);
+                    UpdatePosterVisuals(model, obj, state.CachedRottenTomatoesScore, state.CachedIMDbScore, state.CachedMetacriticScore, state.CachedProductionCountries, state.CachedGenres);
                 }
             }
             else
@@ -603,13 +643,15 @@ namespace YOLOTools.YOLO.Display
                 }
 
                 var productionCountries = tmdbMovieInfo?.production_countries;
+                var genres = tmdbMovieInfo?.genres;
 
                 state.CachedRottenTomatoesScore = rottenTomatoesInt;
                 state.CachedIMDbScore = imdbInt;
                 state.CachedMetacriticScore = metacriticInt;
                 state.CachedProductionCountries = productionCountries;
+                state.CachedGenres = genres;
 
-                UpdatePosterVisuals(model, obj, rottenTomatoesInt, imdbInt, metacriticInt, productionCountries);
+                UpdatePosterVisuals(model, obj, rottenTomatoesInt, imdbInt, metacriticInt, productionCountries, genres);
                 label.text = $"TrackID: {id.ToString()}\n{movieName} - {confidence.ToString("0.00")}";
             }
             else if (movieName == null)

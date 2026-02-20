@@ -17,10 +17,9 @@ public class HandleSliderValueLabel : MonoBehaviour
 
     void Awake()
     {
-        if (_settingsCanvas == null) Debug.LogError("HandleSliderValueLabel::Awake - Failed to get _settingsCanvas");
-        if (_rottenTomatoesSlider == null) Debug.LogError("HandleSliderValueLabel::Awake - Failed to get _rottenTomatoesSlider");
-        if (_metacriticSlider == null) Debug.LogError("HandleSliderValueLabel::Awake - Failed to get _metacriticSlider");
-        if (_imdbSlider == null) Debug.LogError("HandleSliderValueLabel::Awake - Failed to get _imdbSlider");
+        _rottenTomatoesSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(t => t.name == "RottenTomatoesThresholdSlider");
+        _metacriticSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(t => t.name == "MetacriticThresholdSlider");
+        _imdbSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(t => t.name == "IMDbThresholdSlider");
 
         _rottenTomatoesLabel = _settingsCanvas.GetComponentsInChildren<TextMeshProUGUI>().FirstOrDefault(t => t.name == "RottenTomatoesSliderValue");
         _metacriticLabel = _settingsCanvas.GetComponentsInChildren<TextMeshProUGUI>().FirstOrDefault(t => t.name == "MetacriticSliderValue");

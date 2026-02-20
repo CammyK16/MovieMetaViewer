@@ -11,5 +11,6 @@ namespace YOLOTools.YOLO.Display
         public int CachedIMDbScore;
         public int CachedMetacriticScore;
         public ProductionCountry[] CachedProductionCountries;
+        public Genre[] CachedGenres;
     }
 }
