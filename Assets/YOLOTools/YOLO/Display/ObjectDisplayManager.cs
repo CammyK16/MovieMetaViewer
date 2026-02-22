@@ -327,7 +327,7 @@ namespace YOLOTools.YOLO.Display
             }
             else _metacriticThreshold = 0;
 
-            List<string> blockingModes = new List<string>() { "blur", "desaturated", "black" };
+            List<string> blockingModes = new List<string>() { "blur", "desaturated", "black", "borders" };
             var blockingModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
             if (blockingModeDropdown)
             {
@@ -498,7 +498,7 @@ namespace YOLOTools.YOLO.Display
                     }
                 }
 
-                if (posterObject != null)
+                if (posterObject != null && _blockingMode != "borders")
                 {
                     posterObject.gameObject.SetActive(true);
                     var posterObjectMaterial = posterObject.gameObject.GetComponent<Renderer>().material;
@@ -509,12 +509,19 @@ namespace YOLOTools.YOLO.Display
                         posterObjectMaterial.SetTexture("_BaseMap", texture);
                         posterObjectMaterial.SetTexture("_EmissionMap", texture);
                     }
-                    else
+                    else if (_blockingMode == "black")
                     {
                         posterObjectMaterial.SetColor("_BaseColor", Color.black);
                         posterObjectMaterial.SetTexture("_BaseMap", null);
                         posterObjectMaterial.SetTexture("_EmissionMap", null);
-                    }
+
+                        posterObjectMaterial.SetColor("_EmissionColor", Color.black);
+
+                        posterObjectMaterial.SetFloat("_Smoothness", 0f);
+                        posterObjectMaterial.SetFloat("_Metallic", 0f);
+                        posterObjectMaterial.SetFloat("_SpecularHighlights", 0f);
+                        posterObjectMaterial.SetFloat("_EnvironmentReflections", 0f);
+                    } 
                 }
 
                 if (posterBorder != null)
@@ -528,9 +535,23 @@ namespace YOLOTools.YOLO.Display
                         posterBorderMaterial.SetTexture("_BaseMap", texture);
                         posterBorderMaterial.SetTexture("_EmissionMap", texture);
                     }
-                    else
+                    else if (_blockingMode == "black")
                     {
                         posterBorderMaterial.SetColor("_BaseColor", Color.black);
+                        posterBorderMaterial.SetTexture("_BaseMap", null);
+                        posterBorderMaterial.SetTexture("_EmissionMap", null);
+
+                        posterBorderMaterial.SetColor("_EmissionColor", Color.black);
+
+                        posterBorderMaterial.SetFloat("_Smoothness", 0f);
+                        posterBorderMaterial.SetFloat("_Metallic", 0f);
+                        posterBorderMaterial.SetFloat("_SpecularHighlights", 0f);
+                        posterBorderMaterial.SetFloat("_EnvironmentReflections", 0f);
+                    }
+                    else if (_blockingMode == "borders")
+                    {
+                        posterBorderMaterial.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.5f));
+                        posterBorderMaterial.SetColor("_EmissionColor", Color.black); 
                         posterBorderMaterial.SetTexture("_BaseMap", null);
                         posterBorderMaterial.SetTexture("_EmissionMap", null);
                     }
@@ -547,9 +568,19 @@ namespace YOLOTools.YOLO.Display
                 {
                     var posterBorderMaterial = posterBorder.gameObject.GetComponent<Renderer>().material;
 
-                    posterBorderMaterial.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.75f));
-                    posterBorderMaterial.SetTexture("_BaseMap", null);
-                    posterBorderMaterial.SetTexture("_EmissionMap", null);
+                    if (_blockingMode == "borders")
+                    {
+                        posterBorderMaterial.SetColor("_BaseColor", new Color(0f, 1f, 0.53f, 1f)); 
+                        posterBorderMaterial.SetColor("_EmissionColor", new Color(0f, 1f, 0.53f, 1f)); 
+                        posterBorderMaterial.SetTexture("_BaseMap", null);
+                        posterBorderMaterial.SetTexture("_EmissionMap", null);
+                    } else
+                    {                        
+                        posterBorderMaterial.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.5f));
+                        posterBorderMaterial.SetTexture("_BaseMap", null);
+                        posterBorderMaterial.SetTexture("_EmissionMap", null);
+                    }
+
                 }
             }
         }

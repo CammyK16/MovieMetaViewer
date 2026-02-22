@@ -54,7 +54,7 @@ namespace YOLOTools.YOLO
         private RemoteYOLOAnalyseResponse m_remoteYOLOResponse;
         private Camera m_analysisCamera;
 
-        private List<string> blockingModes = new List<string>() {"blur", "desaturated", "black"};
+        private List<string> blockingModes = new List<string>() {"blur", "desaturated", "black", "borders"};
 
         private byte[] m_imageData;
         

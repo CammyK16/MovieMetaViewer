@@ -54,7 +54,7 @@ public class HandleSliderValueLabel : MonoBehaviour
 
     private void OnIMDbChanged(float value)
     {
-        if (_imdbLabel != null) _imdbLabel.text = $"{value/10:F0}";
+        if (_imdbLabel != null) _imdbLabel.text = $"{value/10:F1}";
     }
     
     private void UpdateAllLabels()
