@@ -12,5 +12,6 @@ namespace YOLOTools.YOLO.Display
         public int CachedMetacriticScore;
         public ProductionCountry[] CachedProductionCountries;
         public Genre[] CachedGenres;
+        public bool IsLoaded;
     }
 }

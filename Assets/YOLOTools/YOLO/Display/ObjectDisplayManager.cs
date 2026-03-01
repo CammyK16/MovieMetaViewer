@@ -175,6 +175,7 @@ namespace YOLOTools.YOLO.Display
 
                     var model = Instantiate(_cocoModels[obj.CocoName]);
                     modelList.Add(obj.TrackID, model);
+                    SetUiVisible(model, false);
                     UpdateModel(obj, obj.TrackID, spawnPosition, spawnRotation, model, _environmentRaycastManager != null && _environmentRaycastManager.isActiveAndEnabled && hitConfidence >= 0.5f, false);
                     ModelCount++;
 
@@ -200,8 +201,6 @@ namespace YOLOTools.YOLO.Display
 
                     if (modelCanvas != null)
                     {
-                        SetUiVisible(model, false);
-
                         Button[] buttons = modelCanvas.GetComponentsInChildren<Button>();
                         Button restoreButton = buttons.FirstOrDefault(b => b.name == "RestoreButton");
 
@@ -610,10 +609,13 @@ namespace YOLOTools.YOLO.Display
                     state.CachedRottenTomatoesScore = -1;
                     state.CachedIMDbScore = -1;
                     state.CachedMetacriticScore = -1;
+                    state.IsLoaded = false;
 
                     Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
 
                     label.text = "Loading...";
+
+                    model.SetActive(false);
 
                     string movieId = obj.MovieID;
                     string crop = obj.Crop;
@@ -635,7 +637,9 @@ namespace YOLOTools.YOLO.Display
 
             if (!isFocusMode || model == _currentFocusedObject)
             {
-                model.SetActive(true);
+                var state = model.GetComponent<MovieDisplayState>();
+
+                if (state.IsLoaded) model.SetActive(true);
             }
         }
 
@@ -683,12 +687,18 @@ namespace YOLOTools.YOLO.Display
                 state.CachedGenres = genres;
 
                 UpdatePosterVisuals(model, obj, rottenTomatoesInt, imdbInt, metacriticInt, productionCountries, genres);
-                label.text = $"TrackID: {id.ToString()}\n{movieName} - {confidence.ToString("0.00")}";
+                label.text = $"{movieName}";
+
+                state.IsLoaded = true;
+                if (!isFocusMode || model == _currentFocusedObject) model.SetActive(true);
             }
             else if (movieName == null)
             {
                 Debug.Log($"ObjectDisplayManager::UpdateMovieLabel - Couldn't find ID {movieID}");
                 label.text = "Not Found";
+
+                state.IsLoaded = true;
+                if (!isFocusMode || model == _currentFocusedObject) model.SetActive(true);
             }
         }
 

@@ -17867,7 +17867,7 @@ PrefabInstance:
       objectReference: {fileID: 1769441745}
     - target: {fileID: 5926753334168856719, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: m_remoteYOLOProcessorAddress
-      value: 192.168.2.244:44777
+      value: 192.168.3.244:44777
       objectReference: {fileID: 0}
     - target: {fileID: 6643175488489823232, guid: b28edec912bebb3479f2c9ef4504c190, type: 3}
       propertyPath: near clip plane
