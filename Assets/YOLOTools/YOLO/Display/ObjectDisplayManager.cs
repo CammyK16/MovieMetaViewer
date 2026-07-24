@@ -69,6 +69,17 @@ namespace YOLOTools.YOLO.Display
         private Toggle _rottenTomatesEnabledToggle;
         private Toggle _imdbEnabledToggle;
         private Toggle _metacriticEnabledToggle;
+        private Slider _rottenTomatoesThresholdSlider;
+        private Slider _imdbThresholdSlider;
+        private Slider _metacriticThresholdSlider;
+        private TMP_Dropdown _blockingModeDropdown;
+        private TMP_Dropdown _countryDropdown;
+        private TMP_Dropdown _genreDropdown;
+        private Toggle _countryExcludeShowToggle;
+        private Toggle _genreExcludeToggle;
+        private CountryDropdownManager _countryDropdownManager;
+        private GenreDropdownManager _genreDropdownManager;
+        private static readonly string[] BlockingModes = { "blur", "desaturated", "black", "borders" };
 
         private bool _rottenTomatoesEnabled;
         private bool _imdbEnabled;
@@ -112,7 +123,22 @@ namespace YOLOTools.YOLO.Display
             _imdbEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "IMDbSliderEnabled");
             _metacriticEnabledToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "MetacriticSliderEnabled");
 
+            _rottenTomatoesThresholdSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "RottenTomatoesThresholdSlider");
+            _imdbThresholdSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "IMDbThresholdSlider");
+            _metacriticThresholdSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "MetacriticThresholdSlider");
+
+            _blockingModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
+            _countryDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "CountryDropdown");
+            _genreDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "GenreDropdown");
+
+            _countryExcludeShowToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "ToggleExcludeShowSwitch");
+            _genreExcludeToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "GenreExcludeShowSwitch");
+
+            _countryDropdownManager = _countryDropdown != null ? _countryDropdown.GetComponent<CountryDropdownManager>() : null;
+            _genreDropdownManager = _genreDropdown != null ? _genreDropdown.GetComponent<GenreDropdownManager>() : null;
+
             _selectedCountries = new List<string>();
+            _selectedGenres = new List<string>();
         }
 
         public void DisplayModels(List<DetectedObject> objects, Camera referenceCamera)
@@ -123,14 +149,10 @@ namespace YOLOTools.YOLO.Display
 
             UpdateSettingsFromUI();
             bool settingsChanged = _lastRTThreshold != _rottenTomatoesThreshold || _lastBlockingMode != _blockingMode || _lastIMDbThreshold != _imdbThreshold || _lastMCThreshold != _metacriticThreshold;
-            Debug.Log($"ObjectDisplayManager::DisplayModels - _lastBlockingMode = {_lastBlockingMode}, _blockingMode = {_blockingMode}, settingsChanged = {settingsChanged}");
             _lastRTThreshold = _rottenTomatoesThreshold;
             _lastIMDbThreshold = _imdbThreshold;
             _lastMCThreshold = _metacriticThreshold;
             _lastBlockingMode = _blockingMode;
-
-
-            Dictionary<int, int> objectCounts = new();
             HashSet<int> activeThisFrame = new HashSet<int>();
 
             foreach (var obj in objects)
@@ -156,11 +178,6 @@ namespace YOLOTools.YOLO.Display
 
                 (Vector3 spawnPosition, Quaternion spawnRotation, float hitConfidence) = GetObjectWorldCoordinates(obj);
 
-                if (!objectCounts.TryAdd(obj.CocoClass, 1))
-                {
-                    objectCounts[obj.CocoClass]++;
-                }
-
                 if (modelList.TryGetValue(obj.TrackID, out var existingModel))
                 {
                     // Already got object for this movie, move it
@@ -171,7 +188,7 @@ namespace YOLOTools.YOLO.Display
                     // Dont have object for this move, make a new one 
                     if (ModelCount >= MaxModelCount) continue;
 
-                    if (IsDuplicate(spawnPosition, modelList.Values.ToDictionary(go => go.GetInstanceID(), go => go))) continue;
+                    if (IsDuplicate(spawnPosition, modelList)) continue;
 
                     var model = Instantiate(_cocoModels[obj.CocoName]);
                     modelList.Add(obj.TrackID, model);
@@ -298,66 +315,55 @@ namespace YOLOTools.YOLO.Display
 
             if (_rottenTomatoesEnabled)
             {
-                var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "RottenTomatoesThresholdSlider");
-                if (slider)
+                if (_rottenTomatoesThresholdSlider)
                 {
-                    _rottenTomatoesThreshold = (int)slider.value;
+                    _rottenTomatoesThreshold = (int)_rottenTomatoesThresholdSlider.value;
                 }
             }
             else _rottenTomatoesThreshold = 0;
             
             if (_imdbEnabled)
             {
-                var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "IMDbThresholdSlider");
-                if (slider)
+                if (_imdbThresholdSlider)
                 {
-                    _imdbThreshold = (int)slider.value;
+                    _imdbThreshold = (int)_imdbThresholdSlider.value;
                 }
             }
             else _imdbThreshold = 0;
 
             if (_metacriticEnabled)
             {
-                var slider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(n => n.name == "MetacriticThresholdSlider");
-                if (slider)
+                if (_metacriticThresholdSlider)
                 {
-                    _metacriticThreshold = (int)slider.value;
+                    _metacriticThreshold = (int)_metacriticThresholdSlider.value;
                 }
             }
             else _metacriticThreshold = 0;
 
-            List<string> blockingModes = new List<string>() { "blur", "desaturated", "black", "borders" };
-            var blockingModeDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
-            if (blockingModeDropdown)
+            if (_blockingModeDropdown)
             {
-                var blockingModeIndex = blockingModeDropdown.value;
-                _blockingMode = blockingModes[blockingModeIndex];
+                var blockingModeIndex = Mathf.Clamp(_blockingModeDropdown.value, 0, BlockingModes.Length - 1);
+                _blockingMode = BlockingModes[blockingModeIndex];
             }
 
-            var countrySelectDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "CountryDropdown");
-            if (countrySelectDropdown)
+            if (_countryDropdownManager != null)
             {
-                var countryDropdownManager = countrySelectDropdown.GetComponent<CountryDropdownManager>();
-                _selectedCountries = countryDropdownManager.GetSelectedCountries();
+                _selectedCountries = _countryDropdownManager.GetSelectedCountries();
             }
 
-            var countryExcludeShowToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "ToggleExcludeShowSwitch");
-            if (countryExcludeShowToggle)
+            if (_countryExcludeShowToggle)
             {
-                _countryExcludeShow = countryExcludeShowToggle.isOn;
+                _countryExcludeShow = _countryExcludeShowToggle.isOn;
             }
 
-            var genreSelectDropdown = _settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "GenreDropdown");
-            if (genreSelectDropdown)
+            if (_genreDropdownManager != null)
             {
-                var genreDropdownManager = genreSelectDropdown.GetComponent<GenreDropdownManager>();
-                _selectedGenres = genreDropdownManager.GetSelectedGenres();
+                _selectedGenres = _genreDropdownManager.GetSelectedGenres();
             }
 
-            var genreExcludeToggle = _settingsCanvas.GetComponentsInChildren<Toggle>().FirstOrDefault(t => t.name == "GenreExcludeShowSwitch");
-            if (genreExcludeToggle)
+            if (_genreExcludeToggle)
             {
-                _genreExcludeShow = genreExcludeToggle.isOn;
+                _genreExcludeShow = _genreExcludeToggle.isOn;
             }
         }
 
@@ -405,7 +411,6 @@ namespace YOLOTools.YOLO.Display
             };
             scaleFactor *= 1f - ScaleDampener;
             if (float.IsInfinity(scaleFactor)) scaleFactor = 1f;
-            Debug.Log($"Scale Factor for {obj.CocoName}: {scaleFactor}");
             Vector3 scaleVector = new(scaleFactor, scaleFactor, scaleFactor);
             model.transform.localScale = Vector3.Scale(model.transform.localScale, scaleVector);
         }
@@ -596,7 +601,6 @@ namespace YOLOTools.YOLO.Display
             if (label != null)
             {
                 var state = model.GetComponent<MovieDisplayState>() ?? model.AddComponent<MovieDisplayState>();
-                Debug.Log($"ObjectDisplayManager::UpdateModel - forceUpdate = {forceUpdate}");
                 if (state.CurrentMovieID != obj.MovieID)
                 {
                     var posterObject = model.transform.Find("posterObject");
@@ -610,8 +614,6 @@ namespace YOLOTools.YOLO.Display
                     state.CachedIMDbScore = -1;
                     state.CachedMetacriticScore = -1;
                     state.IsLoaded = false;
-
-                    Debug.Log($"ObjectDisplayManager::UpdateModel - Fetching movie name...");
 
                     label.text = "Loading...";
 
@@ -734,7 +736,7 @@ namespace YOLOTools.YOLO.Display
 
         private bool IsDuplicate(Vector3 spawnPosition, Dictionary<int, GameObject> modelList)
         {
-            foreach (var (id, model) in modelList)
+            foreach (var model in modelList.Values)
             {
                 var distance = Vector3.Distance(spawnPosition, model.transform.position);
                 var boundingBoxR = Vector3.Distance(model.GetComponentInChildren<MeshRenderer>().bounds.max, model.GetComponentInChildren<MeshRenderer>().bounds.center);
@@ -919,15 +921,18 @@ namespace YOLOTools.YOLO.Display
             float normalizedX = (coordinates.x / feedDimensions.Width) - 0.5f;
             float normalizedY = (coordinates.y / feedDimensions.Height) - 0.5f;
 
-            var XSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "XScaleSlider");
-            var YSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "YScaleSlider");
-            normalizedX *= XSlider.value / 100f;
-            normalizedY *= YSlider.value / 100f;
+            var xScaleSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "XScaleSlider");
+            var yScaleSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "YScaleSlider");
+            var horizontalOffsetSlider = _settingsCanvas.GetComponentsInChildren<Slider>().FirstOrDefault(s => s.name == "HorizontalOffsetSlider");
+
+            normalizedX *= (xScaleSlider != null ? xScaleSlider.value : 100f) / 100f;
+            normalizedY *= (yScaleSlider != null ? yScaleSlider.value : 100f) / 100f;
+            float horizontalOffset = horizontalOffsetSlider != null ? horizontalOffsetSlider.value : 0f;
 
             float screenCenterX = _camera.scaledPixelWidth / 2f;
             float screenCenterY = _camera.scaledPixelHeight / 2f;
 
-            var newX = screenCenterX + (normalizedX * feedDimensions.Width) - 55f;
+            var newX = screenCenterX + (normalizedX * feedDimensions.Width) - 55f + horizontalOffset;
             var newY = screenCenterY - (normalizedY * feedDimensions.Height) - 190f;
 
             return new Vector2(newX, newY);

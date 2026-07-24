@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using MyBox;
 using TMPro;
@@ -49,14 +50,22 @@ namespace YOLOTools.YOLO
         #region Internal Variables
 
         private Texture2D m_inputTexture;
-        private bool m_inferencePending = false;
-        private bool m_inferenceDone = false;
-        private RemoteYOLOAnalyseResponse m_remoteYOLOResponse;
         private Camera m_analysisCamera;
+        private TMP_Dropdown m_blockingModeDropdown;
 
-        private List<string> blockingModes = new List<string>() {"blur", "desaturated", "black", "borders"};
+        [SerializeField][Range(1, 4)] private int m_maxInFlightRequests = 2;
+        [SerializeField][Range(1, 4)] private int m_maxResponsesPerFrame = 1;
 
-        private byte[] m_imageData;
+        private int m_inFlightRequestCount;
+        private long m_totalRequestsStarted;
+        private long m_totalRequestsCompleted;
+        private float m_nextThrottleLogTime;
+        private string m_lastBlockingMode = "blur";
+        private int m_lastBlockingModeIndex = 0;
+
+        private readonly Queue<InferenceCompletion> m_inferenceCompletions = new Queue<InferenceCompletion>();
+        private readonly object m_inferenceQueueLock = new object();
+        private static readonly string[] BlockingModes = { "blur", "desaturated", "black", "borders" };
         
         #endregion
         
@@ -83,6 +92,9 @@ namespace YOLOTools.YOLO
             File.Create(Path.Join (Application.persistentDataPath, "metrics.txt")).Close();
 
             m_remoteYOLOClient = new RemoteYOLOClient(m_remoteYOLOProcessorAddress);
+            m_blockingModeDropdown = m_settingsCanvas != null
+                ? m_settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown")
+                : null;
             
             if (m_useCustomModel)
             {
@@ -103,40 +115,48 @@ namespace YOLOTools.YOLO
         private void Update()
         {
             // Toggle running inference if A button is pressed, or we have selected a movie to view
-            if (OVRInput.GetUp(m_stopInferenceButton))
-            {
-                shouldRun = shouldRun ? false : true;
-            } else
-            {
-                shouldRun = !m_objectDisplayManager.isFocusMode;
-            }
-
-            if (m_inferencePending || !shouldRun) return;
+            // if (OVRInput.GetUp(m_stopInferenceButton))
+            // {
+            //     shouldRun = shouldRun ? false : true;
+            // } else
             
+            shouldRun = !m_objectDisplayManager.isFocusMode;
+
+            if (!shouldRun) return;
+
             try
             {
-                if (!m_inferenceDone)
+                ProcessCompletedInferences();
+
+                if (!TryAcquireRequestSlot()) return;
+
+                if (!YOLOCamera)
                 {
-                    if (!YOLOCamera) return;
-                    if (!(m_inputTexture = YOLOCamera.GetTexture())) return;
-                    _ = AnalyseImage(m_inputTexture);
-                    m_inferencePending = true;
-                    m_analysisCamera.CopyFrom(m_referenceCamera);
+                    ReleaseRequestSlot();
+                    return;
                 }
-                else
+
+                if (!(m_inputTexture = YOLOCamera.GetTexture()))
                 {
-                    m_inferencePending = false;
-                    m_inferenceDone = false;
-                    var detectedObjects = YOLOPostProcessor.RemoteYOLOPostprocess(m_remoteYOLOResponse, m_confidenceThreshold);
-                    OnDetectedObjectsUpdated(detectedObjects);
-                    if (m_objectDisplayManager) m_objectDisplayManager.DisplayModels(detectedObjects, m_analysisCamera);
+                    ReleaseRequestSlot();
+                    return;
+                }
+
+                Interlocked.Increment(ref m_totalRequestsStarted);
+                _ = AnalyseImage(m_inputTexture, CaptureCameraState(m_referenceCamera));
+
+                if (Time.unscaledTime >= m_nextThrottleLogTime)
+                {
+                    m_nextThrottleLogTime = Time.unscaledTime + 5f;
+                    var inFlight = Volatile.Read(ref m_inFlightRequestCount);
+                    var started = Interlocked.Read(ref m_totalRequestsStarted);
+                    var completed = Interlocked.Read(ref m_totalRequestsCompleted);
+                    Debug.Log($"RemoteYOLO throttle: inFlight={inFlight}/{m_maxInFlightRequests}, started={started}, completed={completed}");
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError(e);
-                m_inferencePending = false;
-                m_inferenceDone = false;
             }
         }
 
@@ -154,15 +174,13 @@ namespace YOLOTools.YOLO
             }
         }
 
-        private void EncodeImageJPG(object paras)
+        private static byte[] EncodeImageJPG(ImageConversionThreadParams p)
         {
-            var p = (ImageConversionThreadParams)paras;
-            m_imageData = ImageConversion.EncodeArrayToJPG(p.imageBuffer, p.graphicsFormat, p.width, p.height, quality: p.quality);
+            return ImageConversion.EncodeArrayToJPG(p.imageBuffer, p.graphicsFormat, p.width, p.height, quality: p.quality);
         }
 
-        private async Awaitable AnalyseImage(Texture2D texture)
+        private async Awaitable AnalyseImage(Texture2D texture, CameraState cameraState)
         {
-            Debug.Log("RemoteYOLOHandler::AnalyseImage - Running...");
             var imageConversionThreadParams = new ImageConversionThreadParams
             {
                 imageBuffer = texture.GetRawTextureData(),
@@ -171,34 +189,145 @@ namespace YOLOTools.YOLO
                 width = (uint)texture.width,
                 quality = 75
             };
-            
-            await Task.Run(() => EncodeImageJPG(imageConversionThreadParams));
-
-            var blockingModeDropdown = m_settingsCanvas.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.name == "BlockingModeDropdown");
-            string blockingMode;
-            if (blockingModeDropdown != null)
-            {
-                Debug.Log("RemoteYOLOHandler::AnalyseImage - Dropdown found!");
-                var blockingModeIndex = blockingModeDropdown.value;
-                blockingMode = blockingModes[blockingModeIndex];
-            } else
-            {
-                Debug.LogError("RemoteYOLOHandler::AnalyseImage - Dropdown not found!");
-                blockingMode = "blur";
-            }
+            byte[] imageData;
 
             try
             {
-                m_remoteYOLOResponse = await m_remoteYOLOClient.AnalyseAsync(m_imageData, m_YOLOModel, m_YOLOFormat, m_useCustomModel, blockingMode);
-                m_inferenceDone = true;
-                m_inferencePending = false;
+                imageData = await Task.Run(() => EncodeImageJPG(imageConversionThreadParams));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Couldn't encode image: " + e.Message);
+                ReleaseRequestSlot();
+                return;
+            }
+
+            string blockingMode = GetBlockingMode();
+
+            try
+            {
+                var response = await m_remoteYOLOClient.AnalyseAsync(imageData, m_YOLOModel, m_YOLOFormat, m_useCustomModel, blockingMode);
+                lock (m_inferenceQueueLock)
+                {
+                    m_inferenceCompletions.Enqueue(new InferenceCompletion(response, cameraState));
+                }
             }
             catch (Exception e)
             {
                 Debug.LogError("Couldn't analyse image: " + e.Message);
-                m_inferenceDone = false;
-                m_inferencePending = false;
             }
+            finally
+            {
+                Interlocked.Increment(ref m_totalRequestsCompleted);
+                ReleaseRequestSlot();
+            }
+        }
+
+        private bool TryAcquireRequestSlot()
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref m_inFlightRequestCount);
+                if (current >= m_maxInFlightRequests)
+                {
+                    return false;
+                }
+
+                var next = current + 1;
+                if (Interlocked.CompareExchange(ref m_inFlightRequestCount, next, current) == current)
+                {
+                    return true;
+                }
+            }
+        }
+
+        private void ReleaseRequestSlot()
+        {
+            var next = Interlocked.Decrement(ref m_inFlightRequestCount);
+            if (next >= 0)
+            {
+                return;
+            }
+
+            // Guard against accidental over-release so throttling remains valid.
+            Interlocked.Exchange(ref m_inFlightRequestCount, 0);
+            Debug.LogWarning("RemoteYOLOHandler: request slot counter underflow detected; counter reset to 0.");
+        }
+
+        private void ProcessCompletedInferences()
+        {
+            var processed = 0;
+            while (processed < m_maxResponsesPerFrame)
+            {
+                InferenceCompletion completion;
+                lock (m_inferenceQueueLock)
+                {
+                    if (m_inferenceCompletions.Count == 0) break;
+                    completion = m_inferenceCompletions.Dequeue();
+                }
+
+                ApplyCameraState(completion.cameraState);
+
+                var detectedObjects = YOLOPostProcessor.RemoteYOLOPostprocess(completion.response, m_confidenceThreshold);
+                OnDetectedObjectsUpdated(detectedObjects);
+                if (m_objectDisplayManager) m_objectDisplayManager.DisplayModels(detectedObjects, m_analysisCamera);
+
+                processed++;
+            }
+        }
+
+        private CameraState CaptureCameraState(Camera source)
+        {
+            if (source == null)
+            {
+                return default;
+            }
+
+            return new CameraState
+            {
+                position = source.transform.position,
+                rotation = source.transform.rotation,
+                fieldOfView = source.fieldOfView,
+                orthographic = source.orthographic,
+                orthographicSize = source.orthographicSize,
+                nearClipPlane = source.nearClipPlane,
+                farClipPlane = source.farClipPlane,
+                aspect = source.aspect
+            };
+        }
+
+        private void ApplyCameraState(CameraState state)
+        {
+            if (m_analysisCamera == null || m_referenceCamera == null)
+            {
+                return;
+            }
+
+            m_analysisCamera.CopyFrom(m_referenceCamera);
+            m_analysisCamera.transform.SetPositionAndRotation(state.position, state.rotation);
+            m_analysisCamera.fieldOfView = state.fieldOfView;
+            m_analysisCamera.orthographic = state.orthographic;
+            m_analysisCamera.orthographicSize = state.orthographicSize;
+            m_analysisCamera.nearClipPlane = state.nearClipPlane;
+            m_analysisCamera.farClipPlane = state.farClipPlane;
+            m_analysisCamera.aspect = state.aspect;
+        }
+
+        private string GetBlockingMode()
+        {
+            if (m_blockingModeDropdown == null)
+            {
+                return m_lastBlockingMode;
+            }
+
+            var index = Mathf.Clamp(m_blockingModeDropdown.value, 0, BlockingModes.Length - 1);
+            if (index != m_lastBlockingModeIndex)
+            {
+                m_lastBlockingModeIndex = index;
+                m_lastBlockingMode = BlockingModes[index];
+            }
+
+            return m_lastBlockingMode;
         }
         
         private class ImageConversionThreadParams
@@ -208,6 +337,30 @@ namespace YOLOTools.YOLO
             public uint width;
             public uint height;
             public int quality;
+        }
+
+        private struct CameraState
+        {
+            public Vector3 position;
+            public Quaternion rotation;
+            public float fieldOfView;
+            public bool orthographic;
+            public float orthographicSize;
+            public float nearClipPlane;
+            public float farClipPlane;
+            public float aspect;
+        }
+
+        private readonly struct InferenceCompletion
+        {
+            public readonly RemoteYOLOAnalyseResponse response;
+            public readonly CameraState cameraState;
+
+            public InferenceCompletion(RemoteYOLOAnalyseResponse response, CameraState cameraState)
+            {
+                this.response = response;
+                this.cameraState = cameraState;
+            }
         }
     }
 
